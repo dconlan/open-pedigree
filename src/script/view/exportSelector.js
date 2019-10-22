@@ -1,5 +1,9 @@
 import PedigreeExport from 'pedigree/model/export';
 
+// import {saveTextAs} from 'vendor/filesaver/FileSaver';
+// var saveTextAs = FileSaver.saveTextAs;
+// import {PedigreeExport} from 'pedigree/model/export';
+
 /**
  * The UI Element for exporting pedigrees
  *
@@ -26,6 +30,7 @@ var ExportSelector = Class.create( {
     };
     var typeListElement = new Element('table');
     typeListElement.insert(_addTypeOption(true,  'PED', 'ped'));
+    typeListElement.insert(_addTypeOption(false,  'FHIR', 'fhir'));
 
     var fileDownload = new Element('a', {'id': 'downloadLink', 'style': 'display:none'});
     mainDiv.insert(fileDownload);
@@ -104,11 +109,14 @@ var ExportSelector = Class.create( {
 
     if (exportType == 'ped') {
       var idGenerationSetting = $$('input:checked[type=radio][name="ped-options"]')[0].value;
-      if (exportType == 'ped') {
-        var exportString = PedigreeExport.exportAsPED(editor.getGraph().DG, idGenerationSetting);
-        var fileName = 'open-pedigree.ped';
-      }
+      var exportString = PedigreeExport.exportAsPED(editor.getGraph().DG, idGenerationSetting);
+      var fileName = 'open-pedigree.ped';
       var mimeType = 'text/plain';
+    }
+    else if (exportType == 'fhir') {
+      var exportString = PedigreeExport.exportAsFHIR(editor.getGraph().DG);
+      var fileName = 'open-pedigree-fhir.json';
+      var mimeType = 'application/fhir+json';
     }
 
     saveTextAs(exportString, fileName);
