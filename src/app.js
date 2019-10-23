@@ -11,5 +11,5 @@ import '../public/vendor/FontAwesomeIcons.css';
 var editor;
 
 document.observe('dom:loaded',function() {
-  editor = new PedigreeEditor();
+  editor = new PedigreeEditor({patientDataUrl: 'local:pedigreeData?format=internal&closeOnSave=true'});
 });
