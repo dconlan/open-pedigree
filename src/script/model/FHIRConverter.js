@@ -80,7 +80,7 @@ FHIRConverter.initFromFHIR = function(inputText) {
 				throw "Unable to import pedigree: a node with no ID or name is found";
 			}
 
-			let pedigreeID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {},
+			let pedigreeID = newG._addVertex(null, BaseGraph.TYPE.PERSON, nextPerson.properties,
 					newG.defaultPersonNodeWidth);
 
 			if (nextPerson.properties.id) {
@@ -119,8 +119,6 @@ FHIRConverter.initFromFHIR = function(inputText) {
 				externalIDToID[nextPerson.properties.externalId] = pedigreeID;
 				hasID[pedigreeID] = true;
 			}
-
-			newG.properties[pedigreeID] = nextPerson.properties;
 		}
 
 		let getPersonID = function(person) {
@@ -220,7 +218,7 @@ FHIRConverter.initFromFHIR = function(inputText) {
 
 FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 		subjectResource, containedResourcesLookup) {
-	let properties = [];
+	let properties = {};
 	let result = {
 		"properties" : properties
 	};
