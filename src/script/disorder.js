@@ -44,6 +44,7 @@ var Disorder = Class.create( {
     new Ajax.Request(queryURL, {
       method: 'GET',
       onSuccess: this.onDataReady.bind(this),
+      onFailure: this.onDataFail.bind(this),
       //onComplete: complete.bind(this)
       onComplete: callWhenReady ? callWhenReady : {}
     });
@@ -58,6 +59,10 @@ var Disorder = Class.create( {
     } catch (err) {
       console.log('[LOAD DISORDER] Error: ' +  err);
     }
+  },
+  onDataFail : function(error) {
+    console.log("Failed to load DISORDER TERM: id = '" + Disorder.desanitizeID(this._disorderID) + "' setting name to ID");
+    this._name = Disorder.desanitizeID(this._disorderID);
   }
 });
 
