@@ -1,14 +1,12 @@
 <p align="center">
-  <img src="https://repository-images.githubusercontent.com/212736090/a7480a00-fa98-11e9-9398-b61d36cd1d4f" width="400px" alt="Open Pedigree logo"/>
+  <img src="https://repository-images.githubusercontent.com/212736090/2759df80-fe9e-11e9-8fa0-8237e35cbaf7" width="400px" alt="Open Pedigree logo"/>
 </p>
 
 <p align="center">
-  <a href="#">
-    <img src="https://img.shields.io/badge/made%20with-love-E760A4.svg" alt="Made with love">
-  </a>
   <a href="https://opensource.org/licenses/LGPL-2.1" target="_blank">
     <img src="https://img.shields.io/badge/license-LGPL--2.1-blue.svg" alt="LGPL-2.1">
   </a>
+  <img src="https://img.shields.io/badge/made%20in-canada-red.svg" alt="Made with love">
 </p>
 
 

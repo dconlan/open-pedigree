@@ -43,6 +43,7 @@ var HPOTerm = Class.create( {
     new Ajax.Request(queryURL, {
       method: 'GET',
       onSuccess: this.onDataReady.bind(this),
+      onFailure: this.onDataFail.bind(this),
       //onComplete: complete.bind(this)
       onComplete: callWhenReady ? callWhenReady : {}
     });
@@ -57,6 +58,10 @@ var HPOTerm = Class.create( {
     } catch (err) {
       console.log('[LOAD HPO TERM] Error: ' +  err);
     }
+  },
+  onDataFail : function(error) {
+    console.log("Failed to load HPO TERM: id = '" + HPOTerm.desanitizeID(this._hpoID) + "' setting name to ID");
+    this._name = HPOTerm.desanitizeID(this._hpoID);
   }
 });
 

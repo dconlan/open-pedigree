@@ -840,7 +840,51 @@ BaseGraph.prototype = {
       }
     }
     return ancestors;
-  }
+  },
+  
+  getMother : function(v) {
+      if (v !== null){
+          // get parents
+          var parents = this.getParents(v);
+          if (parents.length == 2){
+        	  if (this.properties[parents[0]]['gender'] == 'F') {
+        		  return parents[0];
+        	  }
+        	  if (this.properties[parents[0]]['gender'] == 'M') {
+        		  return parents[1];
+        	  }
+          }
+          for (var i = 0; i < parents.length; i++) {
+              if (this.properties[parents[i]]['gender'] == 'F') {
+                  return parents[i];
+              }
+          }
+      }
+      return null;
+  },
+  
+  getFather : function(v) {
+      if (v !== null){
+          // get parents
+          var parents = this.getParents(v);
+          if (parents.length == 2){
+        	  if (this.properties[parents[0]]['gender'] == 'M') {
+        		  return parents[0];
+        	  }
+        	  if (this.properties[parents[0]]['gender'] == 'F') {
+        		  return parents[1];
+        	  }
+          }
+          for (var i = 0; i < parents.length; i++) {
+              if (this.properties[parents[i]]['gender'] == 'M') {
+                  return parents[i];
+              }
+          }
+      }
+      return null;
+  },
+
+
 };
 
 export default BaseGraph;

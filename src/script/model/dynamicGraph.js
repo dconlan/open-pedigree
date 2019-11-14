@@ -1266,6 +1266,11 @@ DynamicPositionedGraph.prototype = {
       if (!this._recreateUsingBaseGraph(baseGraph)) {
         return null;
       }  // no changes
+    } else if (importType == 'fhir') {
+      var baseGraph = PedigreeImport.initFromFHIR(importString);
+      if (!this._recreateUsingBaseGraph(baseGraph)) {
+        return null;
+      }  // no changes
     }
 
     //this._debugPrintAll("after");

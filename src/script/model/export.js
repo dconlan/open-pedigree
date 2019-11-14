@@ -1,3 +1,5 @@
+import FHIRConverter from 'pedigree/model/FHIRConverter'
+
 var PedigreeExport = function () {
 };
 
@@ -72,6 +74,17 @@ PedigreeExport.exportAsPED = function(pedigree, idGenerationPreference) {
   }
 
   return output;
+};
+
+/* ===============================================================================================
+ *
+ * Creates and returns a JSON in the "FHIR JSON" format
+ *
+ * ===============================================================================================
+ */
+
+PedigreeExport.exportAsFHIR = function(pedigree){
+  return FHIRConverter.exportAsFHIR(pedigree, "all", null);
 };
 
 // ===============================================================================================
