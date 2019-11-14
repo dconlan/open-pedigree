@@ -3,6 +3,11 @@ import HPOTerm from 'pedigree/hpoTerm';
 import Helpers from 'pedigree/model/helpers';
 import GraphicHelpers from 'pedigree/view/graphicHelpers';
 import AgeCalc from 'pedigree/view/ageCalc';
+import TemplateSelector from "pedigree/view/templateSelector";
+import TerminologyManager from "pedigree/terminology/terminologyManger";
+import {DisorderTermType} from "pedigree/terminology/disorderTerm";
+import {GeneTermType} from "pedigree/terminology/geneTerm";
+import {PhenotypeTermType} from "pedigree/terminology/phenotypeTerm";
 
 /**
  * NodeMenu is a UI Element containing options for AbstractNode elements
@@ -114,7 +119,7 @@ var NodeMenu = Class.create({
       }
     });
 
-    var _createSuggest = function(input) {
+    var _createSuggest = function(input, termType, selectizeOptions) {
       var jqnode = jQuery(input);
       if (jqnode) {
         jqnode.selectize({
@@ -123,7 +128,39 @@ var NodeMenu = Class.create({
           sortField: 'text',
           persist: true,
           maxItems: null,
-          delimiter: SELECTIZE_DELIMITER
+          delimiter: SELECTIZE_DELIMITER,
+          onChange : function () {
+            Event.fire(input, 'xwiki:customchange');
+          },
+          load: function (query, callback) {
+            if (query.length < 2) return callback();
+            var queryURL = TerminologyManager.getSearchURL(termType, query);
+            var extraAjaxOptions = TerminologyManager.getSearchAjaxOptions(termType, query)
+            var baseAjaxOptions = {
+              method: 'GET',
+              contentType: "application/json; charset=utf-8",
+              requestHeaders: {
+                'X-Requested-With': null,
+                'X-Prototype-Version': null
+              },
+              onSuccess: function(response){
+                try {
+                  var result = TerminologyManager.processSearchResponse(termType, response);
+                  callback(result);
+                } catch (err) {
+                  console.log('Error searching for disorders: ' +  err);
+                  callback();
+                }
+              },
+              onError: function(error){
+                console.log('Error searching for disorders: ' +  err);
+                callback();
+              }
+            };
+            //console.log("QueryURL: " + queryURL);
+            new Ajax.Request(queryURL, {...baseAjaxOptions, ...extraAjaxOptions});
+          },
+          ...selectizeOptions
         }).on('change', function(value) {
           Event.fire(input, 'xwiki:customchange');
         });
@@ -131,10 +168,56 @@ var NodeMenu = Class.create({
       return jqnode;
     };
 
+
+
     // disease
+    // var diseaseSelectizeOptions = {
+    //   load: function (query, callback) {
+    //     if (query.length <2) return callback();
+    //     var queryURL = 'https://genomics.ontoserver.csiro.au/fhir/' +
+    //         'ValueSet/$expand?_format=json&url=' + 'http://www.omim.org' + "&count=" + 20 +
+    //         "&filter=" + query;
+    //     new Ajax.Request(queryURL, {
+    //       method: 'GET',
+    //       contentType: "application/json; charset=utf-8",
+    //       dataType: "json",
+    //       requestHeaders: {
+    //         'X-Requested-With': null,
+    //         'X-Prototype-Version': null
+    //       },
+    //       onSuccess: function (response) {
+    //         //console.log("Data from LOAD: " + JSON.stringify(response));
+    //         //console.log("[Data from LOAD]");
+    //
+    //         // console.log(response);
+    //         if (response && response.responseText) {
+    //           var parsed = JSON.parse(response.responseText);
+    //
+    //           if (parsed.expansion && parsed.expansion.contains) {
+    //
+    //             var result = [];
+    //             for (var v of parsed.expansion.contains) {
+    //               result.push({'text': v.display, 'value': v.code});
+    //             }
+    //             callback(result);
+    //             return;
+    //           }
+    //         }
+    //         callback();
+    //       },
+    //       onComplete: function () {
+    //       },
+    //       onError: function (error) {
+    //         console.error(error);
+    //         callback();
+    //       }
+    //
+    //     });
+    //   }
+    // };
     this.form.select('select.suggest-omim').each(function(item) {
       if (!item.hasClassName('initialized')) {
-        _createSuggest(item);
+        _createSuggest(item, DisorderTermType);
         item.addClassName('initialized');
       }
     });
@@ -142,7 +225,7 @@ var NodeMenu = Class.create({
     // genes
     this.form.select('select.suggest-genes').each(function(item) {
       if (!item.hasClassName('initialized')) {
-        _createSuggest(item);
+        _createSuggest(item, GeneTermType);
         item.addClassName('initialized');
       }
     });
@@ -150,7 +233,7 @@ var NodeMenu = Class.create({
     // HPO terms
     this.form.select('select.suggest-hpo').each(function(item) {
       if (!item.hasClassName('initialized')) {
-        _createSuggest(item);
+        _createSuggest(item, PhenotypeTermType);
         item.addClassName('initialized');
       }
     });

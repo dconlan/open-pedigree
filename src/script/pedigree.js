@@ -5,7 +5,7 @@ import DynamicPositionedGraph from 'pedigree/model/dynamicGraph';
 import Helpers from 'pedigree/model/helpers';
 import Workspace from 'pedigree/view/workspace';
 import DisorderLegend from 'pedigree/view/disorderLegend';
-import HPOLegend from 'pedigree/view/hpoLegend';
+import PhenotypeLegend from 'pedigree/view/PhenotypeLegend';
 import GeneLegend from 'pedigree/view/geneLegend';
 import ExportSelector from 'pedigree/view/exportSelector';
 import ImportSelector from 'pedigree/view/importSelector';
@@ -17,6 +17,11 @@ import VersionUpdater from 'pedigree/versionUpdater';
 import PedigreeEditorParameters from 'pedigree/pedigreeEditorParameters';
 
 import '../style/editor.css';
+import TerminologyManager from "pedigree/terminology/terminologyManger";
+import {DisorderTermType} from "pedigree/terminology/disorderTerm";
+import FHIRTerminology from "pedigree/terminology/FHIRTerminology";
+import {PhenotypeTermType} from "pedigree/terminology/phenotypeTerm";
+import {GeneTermType} from "pedigree/terminology/geneTerm";
 
 /**
  * The main class of the Pedigree Editor, responsible for initializing all the basic elements of the app.
@@ -37,6 +42,17 @@ var PedigreeEditor = Class.create({
     var returnUrl = options.returnUrl || 'https://github.com/phenotips/open-pedigree';
     this.DEBUG_MODE = Boolean(options.DEBUG_MODE);
 
+    Ajax.Response.prototype._getHeaderJSON = Prototype.emptyFunction;
+
+    TerminologyManager.addTerminology(DisorderTermType, new FHIRTerminology(
+        DisorderTermType, 'http://www.omim.org', /[0-9]+/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://www.omim.org'));
+
+    TerminologyManager.addTerminology(PhenotypeTermType, new FHIRTerminology(
+        PhenotypeTermType, 'http://purl.obolibrary.org/obo/hp.owl', /^(http:\/\/)|(HP:)/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://purl.obolibrary.org/obo/hp.owl?vs'));
+
+    TerminologyManager.addTerminology(GeneTermType, new FHIRTerminology(
+        GeneTermType, 'http://www.genenames.org', /^HGNC:/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://www.genenames.org'));
+
     window.editor = this;
 
     // initialize main data structure which holds the graph structure
@@ -51,7 +67,7 @@ var PedigreeEditor = Class.create({
     this._siblingSelectionBubble  = new NodetypeSelectionBubble(true);
     this._disorderLegend = new DisorderLegend();
     this._geneLegend = new GeneLegend();
-    this._hpoLegend = new HPOLegend();
+    this._hpoLegend = new PhenotypeLegend();
 
     this._view = new View();
 

@@ -2,8 +2,9 @@ import { Timer } from 'pedigree/model/helpers';
 import { ChildlessBehavior } from 'pedigree/view/abstractNode';
 import AbstractPerson from 'pedigree/view/abstractPerson';
 import PersonVisuals from 'pedigree/view/personVisuals';
-import HPOTerm from 'pedigree/hpoTerm';
-import Disorder from 'pedigree/disorder';
+import TerminologyManager from "pedigree/terminology/terminologyManger";
+import {DisorderTermType} from "pedigree/terminology/disorderTerm";
+import {PhenotypeTermType} from "pedigree/terminology/phenotypeTerm";
 
 /**
  * Person is a class representing any AbstractPerson that has sufficient information to be
@@ -52,7 +53,7 @@ var Person = Class.create(AbstractPerson, {
     this._childlessStatus = null;
     this._carrierStatus = '';
     this._disorders = [];
-    this._hpo = [];
+    this._phenotypes = [];
     this._candidateGenes = [];
     this._twinGroup = null;
     this._monozygotic = false;
@@ -511,7 +512,7 @@ var Person = Class.create(AbstractPerson, {
   getDisordersForExport: function() {
     var exportDisorders = this._disorders.slice(0);
     for (var i = 0; i < exportDisorders.length; i++) {
-      exportDisorders[i] = Disorder.desanitizeID(exportDisorders[i]);
+      exportDisorders[i] = TerminologyManager.desanitizeID(DisorderTermType, exportDisorders[i]);
     }
     return exportDisorders;
   },
@@ -520,15 +521,15 @@ var Person = Class.create(AbstractPerson, {
      * Adds disorder to the list of this node's disorders and updates the Legend.
      *
      * @method addDisorder
-     * @param {Disorder} disorder Disorder object or a free-text name string
+     * @param {DisorderTerm} disorder Disorder object or a free-text name string
      */
   addDisorder: function(disorder) {
     if (typeof disorder != 'object') {
-      disorder = editor.getDisorderLegend().getDisorder(disorder);
+      disorder = editor.getDisorderLegend().getTerm(disorder);
     }
-    if(!this.hasDisorder(disorder.getDisorderID())) {
-      editor.getDisorderLegend().addCase(disorder.getDisorderID(), disorder.getName(), this.getID());
-      this.getDisorders().push(disorder.getDisorderID());
+    if(!this.hasDisorder(disorder.getID())) {
+      editor.getDisorderLegend().addCase(disorder.getID(), disorder.getName(), this.getID());
+      this.getDisorders().push(disorder.getID());
     } else {
       alert('This person already has the specified disorder');
     }
@@ -577,85 +578,85 @@ var Person = Class.create(AbstractPerson, {
   /**
      * Returns a list of all HPO terms associated with the patient
      *
-     * @method getHPO
-     * @return {Array} List of HPO IDs.
+     * @method getPhenotypes
+     * @return {Array} List of Phenotype IDs.
      */
-  getHPO: function() {
-    return this._hpo;
+  getPhenotypes: function() {
+    return this._phenotypes;
   },
 
   /**
      * Returns a list of phenotypes of this person, with non-scrambled IDs
      *
-     * @method getHPOForExport
-     * @return {Array} List of human-readable versions of HPO IDs
+     * @method getPhenotypesForExport
+     * @return {Array} List of human-readable versions of Phenotype IDs
      */
-  getHPOForExport: function() {
-    var exportHPOs = this._hpo.slice(0);
-    for (var i = 0; i < exportHPOs.length; i++) {
-      exportHPOs[i] = HPOTerm.desanitizeID(exportHPOs[i]);
+  getPhenotypesForExport: function() {
+    var exportPhenotypes = this._phenotypes.slice(0);
+    for (var i = 0; i < exportPhenotypes.length; i++) {
+      exportPhenotypes[i] = TerminologyManager.desanitizeID(PhenotypeTermType, exportPhenotypes[i]);
     }
-    return exportHPOs;
+    return exportPhenotypes;
   },
 
   /**
-     * Adds HPO term to the list of this node's phenotypes and updates the Legend.
+     * Adds phenotype term to the list of this node's phenotypes and updates the Legend.
      *
-     * @method addHPO
-     * @param {HPOTerm} hpo HPOTerm object or a free-text name string
+     * @method addPhenotype
+     * @param {PhenotypeTerm} phenotype Term object or a free-text name string
      */
-  addHPO: function(hpo) {
-    if (typeof hpo != 'object') {
-      hpo = editor.getHPOLegend().getTerm(hpo);
+  addPhenotype: function(phenotype) {
+    if (typeof phenotype != 'object') {
+      phenotype = editor.getHPOLegend().getTerm(phenotype);
     }
-    if(!this.hasHPO(hpo.getID())) {
-      editor.getHPOLegend().addCase(hpo.getID(), hpo.getName(), this.getID());
-      this.getHPO().push(hpo.getID());
+    if(!this.hasPhenotype(phenotype.getID())) {
+      editor.getHPOLegend().addCase(phenotype.getID(), phenotype.getName(), this.getID());
+      this.getPhenotypes().push(phenotype.getID());
     } else {
       alert('This person already has the specified phenotype');
     }
   },
 
   /**
-     * Removes HPO term from the list of this node's terms and updates the Legend.
+     * Removes phenotype term from the list of this node's terms and updates the Legend.
      *
-     * @method removeHPO
-     * @param {Number} hpoID id of the term to be removed
+     * @method removePhenotype
+     * @param {Number} phenotypeID id of the term to be removed
      */
-  removeHPO: function(hpoID) {
-    if(this.hasHPO(hpoID)) {
-      editor.getHPOLegend().removeCase(hpoID, this.getID());
-      this._hpo = this.getHPO().without(hpoID);
+  removePhenotype: function(phenotypeID) {
+    if(this.hasPhenotype(phenotypeID)) {
+      editor.getHPOLegend().removeCase(phenotypeID, this.getID());
+      this._phenotypes = this.getPhenotypes().without(phenotypeID);
     } else {
-      alert('This person doesn\'t have the specified HPO term');
+      alert('This person doesn\'t have the specified phenotype');
     }
   },
 
   /**
-     * Sets the list of HPO temrs of this person to the given list
+     * Sets the list of phenotype terms of this person to the given list
      *
-     * @method setHPO
-     * @param {Array} hpos List of HPOTerm objects
+     * @method setPhenotypes
+     * @param {Array} phenotypes List of PhenotypeTerm objects
      */
-  setHPO: function(hpos) {
-    if (!Array.isArray(hpos)) {
-      console.log('Warning: trying to setHPO with non-array: ', hpos);
+  setPhenotypes: function(phenotypes) {
+    if (!Array.isArray(phenotypes)) {
+      console.log('Warning: trying to setPhenotypes with non-array: ', phenotypes);
       return;
     }
-    for(var i = this.getHPO().length-1; i >= 0; i--) {
-      this.removeHPO( this.getHPO()[i] );
+    for(var i = this.getPhenotypes().length-1; i >= 0; i--) {
+      this.removePhenotype( this.getPhenotypes()[i] );
     }
-    for(var i = 0; i < hpos.length; i++) {
-      this.addHPO( hpos[i] );
+    for(var i = 0; i < phenotypes.length; i++) {
+      this.addPhenotype( phenotypes[i] );
     }
   },
 
   /**
-     * @method hasHPO
-     * @param {Number} id Term ID, taken from the HPO database
+     * @method hasPhenotype
+     * @param  id Term ID, taken from the phenotype database
      */
-  hasHPO: function(id) {
-    return (this.getHPO().indexOf(id) != -1);
+  hasPhenotype: function(id) {
+    return (this.getPhenotypes().indexOf(id) != -1);
   },
 
   /**
@@ -716,7 +717,7 @@ var Person = Class.create(AbstractPerson, {
      */
   remove: function($super) {
     this.setDisorders([]);  // remove disorders form the legend
-    this.setHPO([]);
+    this.setPhenotypes([]);
     this.setGenes([]);
     $super();
   },
@@ -726,7 +727,7 @@ var Person = Class.create(AbstractPerson, {
      *
      * @method getDisorderByID
      * @param {Number} id Disorder ID, taken from the OMIM database
-     * @return {Disorder}
+     * @return {boolean}
      */
   hasDisorder: function(id) {
     return (this.getDisorders().indexOf(id) != -1);
@@ -777,13 +778,13 @@ var Person = Class.create(AbstractPerson, {
     // maybe: use editor.getGraph().hasNonPlaceholderNonAdoptedChildren() ?
     var disorders = [];
     this.getDisorders().forEach(function(disorder) {
-      var disorderName = editor.getDisorderLegend().getDisorder(disorder).getName();
+      var disorderName = editor.getDisorderLegend().getTerm(disorder).getName();
       disorders.push({id: disorder, value: disorderName});
     });
-    var hpoTerms = [];
-    this.getHPO().forEach(function(hpo) {
-      var termName = editor.getHPOLegend().getTerm(hpo).getName();
-      hpoTerms.push({id: hpo, value: termName});
+    var phenotypes = [];
+    this.getPhenotypes().forEach(function(phenotype) {
+      var termName = editor.getHPOLegend().getTerm(phenotype).getName();
+      phenotypes.push({id: phenotype, value: termName});
     });
 
     var cantChangeAdopted = this.isFetus() || editor.getGraph().hasToBeAdopted(this.getID());
@@ -835,7 +836,7 @@ var Person = Class.create(AbstractPerson, {
       placeholder:   {value : false, inactive: true },
       monozygotic:   {value : this.getMonozygotic(), inactive: inactiveMonozygothic, disabled: disableMonozygothic },
       evaluated:     {value : this.getEvaluated() },
-      hpo_positive:  {value : hpoTerms},
+      hpo_positive:  {value : phenotypes},
       nocontact:     {value : this.getLostContact(), inactive: inactiveLostContact}
     };
   },
@@ -884,8 +885,8 @@ var Person = Class.create(AbstractPerson, {
     if (this.getDisorders().length > 0) {
       info['disorders'] = this.getDisordersForExport();
     }
-    if (this.getHPO().length > 0) {
-      info['hpoTerms'] = this.getHPOForExport();
+    if (this.getPhenotypes().length > 0) {
+      info['hpoTerms'] = this.getPhenotypesForExport();
     }
     if (this.getGenes().length > 0) {
       info['candidateGenes'] = this.getGenes();
@@ -935,7 +936,7 @@ var Person = Class.create(AbstractPerson, {
         this.setDisorders(info.disorders);
       }
       if(info.hpoTerms) {
-        this.setHPO(info.hpoTerms);
+        this.setPhenotypes(info.hpoTerms);
       }
       if(info.candidateGenes) {
         this.setGenes(info.candidateGenes);
