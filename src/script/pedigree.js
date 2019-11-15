@@ -5,7 +5,7 @@ import DynamicPositionedGraph from 'pedigree/model/dynamicGraph';
 import Helpers from 'pedigree/model/helpers';
 import Workspace from 'pedigree/view/workspace';
 import DisorderLegend from 'pedigree/view/disorderLegend';
-import PhenotypeLegend from 'pedigree/view/PhenotypeLegend';
+import PhenotypeLegend from 'pedigree/view/phenotypeLegend';
 import GeneLegend from 'pedigree/view/geneLegend';
 import ExportSelector from 'pedigree/view/exportSelector';
 import ImportSelector from 'pedigree/view/importSelector';

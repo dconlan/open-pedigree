@@ -8,6 +8,7 @@ import TerminologyManager from "pedigree/terminology/terminologyManger";
 import {DisorderTermType} from "pedigree/terminology/disorderTerm";
 import {GeneTermType} from "pedigree/terminology/geneTerm";
 import {PhenotypeTermType} from "pedigree/terminology/phenotypeTerm";
+import DisorderLegend from "pedigree/view/disorderLegend";
 
 /**
  * NodeMenu is a UI Element containing options for AbstractNode elements
@@ -653,8 +654,14 @@ var NodeMenu = Class.create({
             if (value && value.hasOwnProperty("id")) {
               ids.push(value.id);
             }
-          })
+          });
+          target[0].selectize.clearOptions();
+          var currentDisorders = editor.getDisorderLegend().getCurrentDisorders();
+          for (var disorder of currentDisorders){
+            target[0].selectize.addOption({'text': disorder.getName(), 'value': disorder.getID()});
+          }
           target[0].selectize.setValue(ids, true);
+          target[0].selectize.refreshOptions(false);
         }
       }
     },
@@ -668,8 +675,14 @@ var NodeMenu = Class.create({
             if (value && value.hasOwnProperty("id")) {
               ids.push(value.id);
             }
-          })
+          });
+          target[0].selectize.clearOptions();
+          var currentPhenotypes = editor.getHPOLegend().getCurrentPhenotypes();
+          for (var phenotype of currentPhenotypes){
+            target[0].selectize.addOption({'text': phenotype.getName(), 'value': phenotype.getID()});
+          }
           target[0].selectize.setValue(ids, true);
+          target[0].selectize.refreshOptions(false);
         }
       }
     },
@@ -678,7 +691,13 @@ var NodeMenu = Class.create({
       if (target && target[0] && target[0].selectize) {
         if (Array.isArray(values)) {
           // Genes are just a straight array of strings
+          target[0].selectize.clearOptions();
+          var currentGenes = editor.getGeneLegend().getCurrentGenes();
+          for (var gene of currentGenes){
+            target[0].selectize.addOption({'text': gene.getName(), 'value': gene.getID()});
+          }
           target[0].selectize.setValue(values, true);
+          target[0].selectize.refreshOptions(false);
         }
       }
     },

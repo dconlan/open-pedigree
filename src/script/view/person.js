@@ -5,6 +5,7 @@ import PersonVisuals from 'pedigree/view/personVisuals';
 import TerminologyManager from "pedigree/terminology/terminologyManger";
 import {DisorderTermType} from "pedigree/terminology/disorderTerm";
 import {PhenotypeTermType} from "pedigree/terminology/phenotypeTerm";
+import {GeneTermType} from "pedigree/terminology/geneTerm";
 
 /**
  * Person is a class representing any AbstractPerson that has sufficient information to be
@@ -664,10 +665,15 @@ var Person = Class.create(AbstractPerson, {
      *
      * @method addGenes
      */
-  addGene: function(gene) {
-    if (this.getGenes().indexOf(gene) == -1) {
-      editor.getGeneLegend().addCase(gene, gene, this.getID());
-      this.getGenes().push(gene);
+  addGene: function(geneID) {
+    if (typeof geneID != 'object') {
+      geneID = editor.getGeneLegend().getTerm(geneID);
+    }
+    if(!this.hasGene(geneID.getID())) {
+      editor.getGeneLegend().addCase(geneID.getID(), geneID.getName(), this.getID());
+      this.getGenes().push(geneID.getID());
+    } else {
+      console.log('This person already has the specified gene');
     }
   },
 
@@ -676,29 +682,33 @@ var Person = Class.create(AbstractPerson, {
      *
      * @method removeGene
      */
-  removeGene: function(gene) {
-    if (this.getGenes().indexOf(gene) !== -1) {
-      editor.getGeneLegend().removeCase(gene, this.getID());
-      this._candidateGenes = this.getGenes().without(gene);
+  removeGene: function(geneID) {
+    if(this.hasGene(geneID)) {
+      editor.getGeneLegend().removeCase(geneID, this.getID());
+      this._candidateGenes = this.getGenes().without(geneID);
+    } else {
+      console.log('This person doesn\'t have the specified gene');
     }
   },
 
   /**
-     * Sets the list of candidate genes of this person to the given list
-     *
-     * @method setGenes
-     * @param {Array} genes List of gene names (as strings)
-     */
+   * Sets the list of candidate genes of this person to the given list
+   *
+   * @method setGenes
+   * @param {Array} genes List of GeneTerm objects
+   */
   setGenes: function(genes) {
+    if (!Array.isArray(genes)) {
+      console.log('Warning: trying to setGenes with non-array: ', genes);
+      return;
+    }
     for(var i = this.getGenes().length-1; i >= 0; i--) {
-      this.removeGene(this.getGenes()[i]);
+      this.removeGene( this.getGenes()[i] );
     }
     for(var i = 0; i < genes.length; i++) {
       this.addGene( genes[i] );
     }
-    this.getGraphics().updateDisorderShapes();
   },
-
   /**
      * Returns a list of candidate genes for this person.
      *
@@ -708,7 +718,26 @@ var Person = Class.create(AbstractPerson, {
   getGenes: function() {
     return this._candidateGenes;
   },
-
+  /**
+   * Returns a list of phenotypes of this person, with non-scrambled IDs
+   *
+   * @method getPhenotypesForExport
+   * @return {Array} List of human-readable versions of Phenotype IDs
+   */
+  getGenesForExport: function() {
+    var exportGenes = this._candidateGenes.slice(0);
+    for (var i = 0; i < exportGenes.length; i++) {
+      exportGenes[i] = TerminologyManager.desanitizeID(GeneTermType, exportGenes[i]);
+    }
+    return exportGenes;
+  },
+  /**
+   * @method hasPhenotype
+   * @param  id Term ID, taken from the phenotype database
+   */
+  hasGene: function(id) {
+    return (this.getGenes().indexOf(id) != -1);
+  },
   /**
      * Removes the node and its visuals.
      *
@@ -889,7 +918,7 @@ var Person = Class.create(AbstractPerson, {
       info['hpoTerms'] = this.getPhenotypesForExport();
     }
     if (this.getGenes().length > 0) {
-      info['candidateGenes'] = this.getGenes();
+      info['candidateGenes'] = this.getGenesForExport();
     }
     if (this._twinGroup !== null) {
       info['twinGroup'] = this._twinGroup;

@@ -145,6 +145,14 @@ var DisorderLegend = Class.create( Legend, {
       }
       return randomColor;
     }
+  },
+
+  getCurrentDisorders : function(){
+    var currentDisorders = [];
+    for (var id in this._affectedNodes){
+      currentDisorders.push(this.getTerm(id));
+    }
+    return currentDisorders;
   }
 });
 

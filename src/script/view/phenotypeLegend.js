@@ -78,6 +78,13 @@ var PhenotypeLegend = Class.create( Legend, {
     //console.log("updating phenotype display for " + id + ", name = " + this.getTerm(id).getName());
     var name = this._legendBox.down('li#' + this._getPrefix() + '-' + id + ' .disorder-name');
     name.update(this.getTerm(id).getName());
+  },
+  getCurrentPhenotypes : function(){
+    var currentPhenotypes = [];
+    for (var id in this._affectedNodes){
+      currentPhenotypes.push(this.getTerm(id));
+    }
+    return currentPhenotypes;
   }
 });
 
