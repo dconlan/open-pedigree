@@ -44,14 +44,24 @@ var PedigreeEditor = Class.create({
 
     Ajax.Response.prototype._getHeaderJSON = Prototype.emptyFunction;
 
-    TerminologyManager.addTerminology(DisorderTermType, new FHIRTerminology(
-        DisorderTermType, 'http://www.omim.org', /[0-9]+/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://www.omim.org'));
+    if (!TerminologyManager.hasType(DisorderTermType)){
+      // initialise default disorder terminology
+      TerminologyManager.addTerminology(DisorderTermType, new FHIRTerminology(
+          DisorderTermType, 'http://www.omim.org', /[0-9]+/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://www.omim.org'));
+    }
+    if (!TerminologyManager.hasType(PhenotypeTermType)){
+      // initialise default phenotype terminology
+      TerminologyManager.addTerminology(PhenotypeTermType, new FHIRTerminology(
+          PhenotypeTermType, 'http://purl.obolibrary.org/obo/hp.owl', /^(http:\/\/)|(HP:)/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://purl.obolibrary.org/obo/hp.owl?vs'));
+    }
+    if (!TerminologyManager.hasType(GeneTermType)){
+      // initialise default gene terminology
+      TerminologyManager.addTerminology(GeneTermType, new FHIRTerminology(
+          GeneTermType, 'http://www.genenames.org', /^HGNC:/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://www.genenames.org'));
+    }
 
-    TerminologyManager.addTerminology(PhenotypeTermType, new FHIRTerminology(
-        PhenotypeTermType, 'http://purl.obolibrary.org/obo/hp.owl', /^(http:\/\/)|(HP:)/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://purl.obolibrary.org/obo/hp.owl?vs'));
 
-    TerminologyManager.addTerminology(GeneTermType, new FHIRTerminology(
-        GeneTermType, 'http://www.genenames.org', /^HGNC:/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://www.genenames.org'));
+
 
     window.editor = this;
 

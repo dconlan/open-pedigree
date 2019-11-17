@@ -30,5 +30,12 @@
   </head>
 
   <body id='body'>
+  <script type="text/javascript">
+    var editor;
+
+    document.observe('dom:loaded',function() {
+      editor = OpenPedigree.initialiseEditor({patientDataUrl: 'local:pedigreeData?format=internal&closeOnSave=true'});
+    });
+  </script>
   </body>
 </html>

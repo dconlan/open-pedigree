@@ -1,5 +1,9 @@
 import BaseGraph from 'pedigree/model/baseGraph';
 import RelationshipTracker from "pedigree/model/relationshipTracker";
+import TerminologyManager from "pedigree/terminology/terminologyManger";
+import {GeneTermType} from "pedigree/terminology/geneTerm";
+import {DisorderTermType} from "pedigree/terminology/disorderTerm";
+import {PhenotypeTermType} from "pedigree/terminology/phenotypeTerm";
 
 
 var FHIRConverter = function() {
@@ -296,9 +300,8 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 	}
 	if (familyHistoryResource.condition) {
 		let disorders = [];
-		//@todo fix getting system
-		// let disorderSystem = LookupManager.getCodeSystem('disorder');//editor.getDisorderSystem();
-		let disorderSystem = 'http://www.omim.org';
+		// let disorderSystem = 'http://www.omim.org';
+		let disorderSystem = TerminologyManager.getCodeSystem(DisorderTermType);//editor.getDisorderSystem();
 		for (let i = 0; i < familyHistoryResource.condition.length; i++) {
 			let condition = familyHistoryResource.condition[i].code;
 			if (condition && condition.coding) {
@@ -436,11 +439,10 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 					let isSympton = false;
 					let isGene = false;
 					let value = null;
-					//@todo fix getting system
-					// let hpoSystem = LookupManager.getCodeSystem('phenotype');
-					// let geneSystem = LookupManager.getCodeSystem('gene');
-					let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
-					let geneSystem = 'http://www.genenames.org';
+					// let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
+					// let geneSystem = 'http://www.genenames.org';
+					let hpoSystem = TerminologyManager.getCodeSystem(PhenotypeTermType);
+					let geneSystem = TerminologyManager.getCodeSystem(GeneTermType);
 					if (observationResource.id.substring(0, clinical.length) === clinical) {
 						isSympton = true;
 					} else if (observationResource.id.substring(0, genes.length) === genes) {
@@ -618,11 +620,10 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
 	if (pedigree.GG.properties[0]['disorders']) {
 		let disorders = pedigree.GG.properties[0]['disorders'];
 		let disorderLegend = editor.getDisorderLegend();
-		//@todo fix getting system
-		// let disorderSystem = LookupManager.getCodeSystem('disorder');//editor.getDisorderSystem();
-		let disorderSystem = 'http://www.omim.org';
+		// let disorderSystem = 'http://www.omim.org';
+		let disorderSystem = TerminologyManager.getCodeSystem(DisorderTermType);//editor.getDisorderSystem();
 		for (let i = 0; i < disorders.length; i++) {
-			let disorderTerm = disorderLegend.getDisorder(disorders[i]);
+			let disorderTerm = disorderLegend.getTerm(disorders[i]);
 			let fhirCondition = null;
 			if (disorderTerm.getName() === disorders[i]){
 				// name and ID the same, must not be from omim
@@ -690,9 +691,8 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
 		if (nodeProperties['hpoTerms']) {
 			let hpoTerms = nodeProperties['hpoTerms'];
 			let hpoLegend = editor.getHPOLegend();
-			//@todo fix code system
-			// let hpoSystem =  LookupManager.getCodeSystem('phenotype');
-			let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
+			// let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
+			let hpoSystem =  TerminologyManager.getCodeSystem(PhenotypeTermType);
 
 			for (let j = 0; j < hpoTerms.length; j++) {
 				let fhirObservation = {
@@ -724,9 +724,8 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
 		if (nodeProperties['candidateGenes']) {
 			let candidateGenes = nodeProperties['candidateGenes'];
 			let geneLegend = editor.getGeneLegend();
-			//@todo fix code system
-			// let geneSystem = LookupManager.getCodeSystem('gene');
-			let geneSystem = 'http://www.genenames.org';
+			//let geneSystem = 'http://www.genenames.org';
+			let geneSystem = TerminologyManager.getCodeSystem(GeneTermType);
 			for (let j = 0; j < candidateGenes.length; j++) {
 				// @TODO change to use http://build.fhir.org/ig/HL7/genomics-reporting/obs-region-studied.html
 				let fhirObservation = {
@@ -1996,7 +1995,7 @@ FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 		let lname = nodeProperties['lName'] || "";
 		let fname = nodeProperties['fName'] || "";
 		if (lname && fname) {
-			name = lname + ", " + fname;
+			name = fname + " " + lname;
 		}
 		if (nodeProperties['lNameAtB'] && nodeProperties['lNameAtB'] !== lname) {
 			name = name + " (" + nodeProperties['lNameAtB'] + ")";
@@ -2048,12 +2047,11 @@ FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 		let disorders = nodeProperties['disorders'];
 		let conditions = [];
 		let disorderLegend = editor.getDisorderLegend();
-		//@todo fix getting system
-		// let disorderSystem = LookupManager.getCodeSystem('disorder');//editor.getDisorderSystem();
-		let disorderSystem = 'http://www.omim.org';
+		// let disorderSystem = 'http://www.omim.org';
+		let disorderSystem = TerminologyManager.getCodeSystem(DisorderTermType);
 
 		for (let i = 0; i < disorders.length; i++) {
-			let disorderTerm = disorderLegend.getDisorder(disorders[i]);
+			let disorderTerm = disorderLegend.getTerm(disorders[i]);
 			if (disorderTerm.getName() === disorders[i]){
 				// name and ID the same, must not be from omim
 				conditions.push({
