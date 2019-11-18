@@ -2,6 +2,7 @@ import Raphael from 'pedigree/raphael';
 import Legend from 'pedigree/view/legend';
 import DisorderTerm, {DisorderTermType} from "pedigree/terminology/disorderTerm";
 import TerminologyManager from "pedigree/terminology/terminologyManger";
+import GeneTerm from "pedigree/terminology/geneTerm";
 
 /**
  * Class responsible for keeping track of disorders and their properties, and for
@@ -63,7 +64,11 @@ var DisorderLegend = Class.create( Legend, {
 
     $super(disorderID, disorderName, nodeID);
   },
-
+  addToCache: function(id, name){
+    if (!this._disorderCache.hasOwnProperty(id)) {
+      this._disorderCache[id] = new DisorderTerm(id, name);
+    }
+  },
   /**
      * Updates the displayed disorder name for the given disorder
      *

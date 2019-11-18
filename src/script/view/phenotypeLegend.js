@@ -1,6 +1,7 @@
 import Legend from 'pedigree/view/legend';
 import TerminologyManager from "pedigree/terminology/terminologyManger";
 import PhenotypeTerm, {PhenotypeTermType} from "pedigree/terminology/phenotypeTerm";
+import GeneTerm from "pedigree/terminology/geneTerm";
 
 /**
  * Class responsible for keeping track of HPO terms and their properties, and for
@@ -66,7 +67,11 @@ var PhenotypeLegend = Class.create( Legend, {
 
     $super(id, name, nodeID);
   },
-
+  addToCache: function(id, name){
+    if (!this._termCache.hasOwnProperty(id)) {
+      this._termCache[id] = new PhenotypeTerm(id, name);
+    }
+  },
   /**
      * Updates the displayed phenotype name for the given phenotype
      *

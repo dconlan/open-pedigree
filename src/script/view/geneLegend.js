@@ -113,6 +113,15 @@ var GeneLegend = Class.create( Legend, {
 
     $super(id, name, nodeID);
   },
+  addToCache: function(id, name){
+    if (!this._termCache.hasOwnProperty(id)) {
+      console.log('Adding to cache ' + id + '=>' + name);
+      this._termCache[id] = new GeneTerm(id, name);
+    }
+    else {
+      console.log(this._termCache[id])
+    }
+  },
   getCurrentGenes : function(){
     var currentGenes = [];
     for (var id in this._affectedNodes){

@@ -244,6 +244,18 @@ var PedigreeEditor = Class.create({
     return this._geneLegend;
   },
 
+  getLegend: function(type) {
+    if (type == DisorderTermType){
+      return this._disorderLegend;
+    }
+    else if (type == PhenotypeTermType){
+      return this._hpoLegend;
+    }
+    else if (type == GeneTermType){
+      return this._geneLegend;
+    }
+    return undefined;
+  },
   /**
      * @method getPaper
      * @return {Workspace.paper} Raphael paper element
@@ -430,7 +442,7 @@ var PedigreeEditor = Class.create({
         'label' : 'Phenotypic features',
         'type' : 'hpo-picker',
         'tab': 'Clinical',
-        'function' : 'setHPO'
+        'function' : 'setPhenotypes'
       },
       {
         'name' : 'date_of_birth',

@@ -120,7 +120,7 @@ var NodeMenu = Class.create({
       }
     });
 
-    var _createSuggest = function(input, termType, selectizeOptions) {
+    var _createSuggest = function(input, termType, getLegend, selectizeOptions) {
       var jqnode = jQuery(input);
       if (jqnode) {
         jqnode.selectize({
@@ -131,6 +131,16 @@ var NodeMenu = Class.create({
           maxItems: null,
           delimiter: SELECTIZE_DELIMITER,
           onChange : function () {
+            console.log('OnChange : ' + termType );
+            var legend = editor.getLegend(termType);
+            console.log(jqnode[0].selectize.getValue());
+            for (var v of jqnode[0].selectize.getValue()){
+              var item = jqnode[0].selectize.getItem(v);
+              var name = item.text();
+              console.log(v);
+              console.log(item.text());
+              legend.addToCache(TerminologyManager.sanitizeID(termType, v), name);
+            }
             Event.fire(input, 'xwiki:customchange');
           },
           load: function (query, callback) {
@@ -162,8 +172,6 @@ var NodeMenu = Class.create({
             new Ajax.Request(queryURL, {...baseAjaxOptions, ...extraAjaxOptions});
           },
           ...selectizeOptions
-        }).on('change', function(value) {
-          Event.fire(input, 'xwiki:customchange');
         });
       }
       return jqnode;
@@ -218,7 +226,7 @@ var NodeMenu = Class.create({
     // };
     this.form.select('select.suggest-omim').each(function(item) {
       if (!item.hasClassName('initialized')) {
-        _createSuggest(item, DisorderTermType);
+        _createSuggest(item, DisorderTermType, editor.getDisorderLegend);
         item.addClassName('initialized');
       }
     });
@@ -226,7 +234,7 @@ var NodeMenu = Class.create({
     // genes
     this.form.select('select.suggest-genes').each(function(item) {
       if (!item.hasClassName('initialized')) {
-        _createSuggest(item, GeneTermType);
+        _createSuggest(item, GeneTermType, editor.getGeneLegend);
         item.addClassName('initialized');
       }
     });
@@ -234,7 +242,7 @@ var NodeMenu = Class.create({
     // HPO terms
     this.form.select('select.suggest-hpo').each(function(item) {
       if (!item.hasClassName('initialized')) {
-        _createSuggest(item, PhenotypeTermType);
+        _createSuggest(item, PhenotypeTermType, editor.getHPOLegend);
         item.addClassName('initialized');
       }
     });
@@ -323,11 +331,13 @@ var NodeMenu = Class.create({
           var properties = {};
           properties[method] = _this.fieldMap[field.name].crtValue;
           var event = { 'nodeID': target.getID(), 'properties': properties };
+          // console.log(event);
           document.fire('pedigree:node:setproperty', event);
         } else {
           var properties = {};
           properties[method] = _this.fieldMap[field.name].crtValue;
           var event = { 'nodeID': target.getID(), 'modifications': properties };
+          // console.log(event);
           document.fire('pedigree:node:modify', event);
         }
         field.fire('pedigree:change');
@@ -694,6 +704,7 @@ var NodeMenu = Class.create({
           target[0].selectize.clearOptions();
           var currentGenes = editor.getGeneLegend().getCurrentGenes();
           for (var gene of currentGenes){
+            console.log("Adding options " + gene.getID() + "=>" + gene.getName());
             target[0].selectize.addOption({'text': gene.getName(), 'value': gene.getID()});
           }
           target[0].selectize.setValue(values, true);
