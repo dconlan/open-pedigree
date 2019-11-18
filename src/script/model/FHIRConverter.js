@@ -1997,6 +1997,12 @@ FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 		if (lname && fname) {
 			name = fname + " " + lname;
 		}
+		else if (lname){
+			name = lname;
+		}
+		else if (fname){
+			name = fname;
+		}
 		if (nodeProperties['lNameAtB'] && nodeProperties['lNameAtB'] !== lname) {
 			name = name + " (" + nodeProperties['lNameAtB'] + ")";
 		}
