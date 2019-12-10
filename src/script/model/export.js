@@ -27,6 +27,8 @@ PedigreeExport.prototype = {
 PedigreeExport.exportAsPED = function(pedigree, idGenerationPreference) {
   var output = '';
 
+  var familyID = 'OPENPED';
+
   var idToPedId = PedigreeExport.createNewIDs(pedigree, idGenerationPreference);
 
   for (var i = 0; i <= pedigree.GG.getMaxRealVertexId(); i++) {
@@ -34,7 +36,7 @@ PedigreeExport.exportAsPED = function(pedigree, idGenerationPreference) {
       continue;
     }
 
-    output += idToPedId[i] + ' ';
+    output += familyID + ' ' + idToPedId[i] + ' ';
 
     // mother & father
     var parents = pedigree.GG.getParents(i);
