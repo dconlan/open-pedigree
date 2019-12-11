@@ -131,7 +131,11 @@ var PedigreeEditor = Class.create({
 
     var closeButton = $('action-close');
     closeButton && closeButton.on('click', function(event) {
-      if (returnUrl) {
+      if (returnUrl === "#CloseWindow"){
+        console.log("Attempt to close the window");
+        window.close();
+      }
+      else if (returnUrl) {
         window.location = returnUrl;
       }
     });

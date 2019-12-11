@@ -66,10 +66,12 @@
       }
       console.log("creating editor");
 
-      var editorOptions = {patientDataUrl: 'local:pedigreeData?format=fhir&closeOnSave=true'}
+      var editorOptions = {patientDataUrl: 'local:pedigreeData?format=fhir&closeOnSave=true',
+                           returnUrl: '#CloseWindow'};
 
 
       editor = OpenPedigree.initialiseEditor(editorOptions);
+
     });
   </script>
   </body>
