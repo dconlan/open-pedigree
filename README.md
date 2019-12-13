@@ -67,3 +67,30 @@ You can easily comply with this license by:
 * including prominent notice of the use of Open Pedigree in your software that uses it
 * retaining all copyright notices in the software
 * ensuring that any and all changes you make to the software are disclosed and open-sourced under the LGPL
+
+
+# FHIR export/import
+
+The FHIR import/export does not have an actual specification to follow. There is a specification in development, though
+we have deviated from it, choosing to use a Composition so that the family history resources and observations can be
+bundled together, rather then the List of family history resources in the current specification. Not all data gathered
+by the editor has a mapping in the FHIR representation. This means that any  data with no mapping will be lost. 
+Some other aspects of the mapping also do not translate directly, where possible
+naming conventions are used to try and account for these. For example the FHIR FamilyHistory resource has a single
+name field which is a string. The pedigree editor has a first name, last name and a last name at birth, this will
+be written into the FamilyHistory resource as <first name> <last name> (<last name at birth>). When importing the FHIR
+resource everything but the last word is the first name and a trailing name in brackets will be taken as last name at birth.
+
+Heredity options - This can be 'Childless' or 'Infertile' in the editor, but is not currently stored on the fhir resource.
+Carrier Status - This can be 'Carrier' or 'Pre-symptomatic' in the editor, but is not currently stored on the fhir resource.
+Evaluated - This is a checkbox in the editor, but is not currently stored on the fhir resource.
+Lost Contact - This is a checkbox in the editor, but is not currently stored on the fhir resource. 
+Multiple Sibling Nodes - In the editor you can create a single node to represent multiple siblings, at the moment these
+will be saved as a single familiy history resource with no name and the number of siblings will be lost.
+
+Phenotype and Candidate Genes are both stored as Observation Resources associated with a family history resource. The
+system uses a naming convention to distinguish the two, otherwise it tries to match the code system to try and determine
+if the observation represents a Phenotype or Candidate gene.
+
+Life status - This can be 'unborn', 'stillborn' and 'aborted' with an associated gestation age. This will be written into
+the deceasedString field on the family history resource in a form like 'stillborn 34 weeks'.
