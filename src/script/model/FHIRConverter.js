@@ -282,6 +282,15 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 			}
 		}
 	}
+
+	if (familyHistoryResource.identifier){
+		for (let i = 0; i < familyHistoryResource.identifier.length; i++) {
+			if (familyHistoryResource.identifier[i].system === "https://github.com/phenotips/open-pedigree?externalID"){
+				properties.externalID = familyHistoryResource.identifier[i].value;
+				break;
+			}
+		}
+	}
 	let dateSplitter = /([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2]|[1-9])(-(0[1-9]|[1-2][0-9]|3[0-1]|[1-9]))?)?/;
 	if (familyHistoryResource.bornDate) {
 		let bornDateSplit = dateSplitter.exec(familyHistoryResource.bornDate);
@@ -2274,6 +2283,13 @@ FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 			}
 		}
 		fmhResource['condition'] = conditions;
+	}
+
+	if (nodeProperties['externalID']){
+		fmhResource['identifier'] = [{
+			"system": "https://github.com/phenotips/open-pedigree?externalID",
+			"value": nodeProperties['externalID']
+		}];
 	}
 	return fmhResource;
 
