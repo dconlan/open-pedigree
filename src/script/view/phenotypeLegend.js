@@ -1,15 +1,17 @@
-import HPOTerm from 'pedigree/hpoTerm';
 import Legend from 'pedigree/view/legend';
+import TerminologyManager from "pedigree/terminology/terminologyManger";
+import PhenotypeTerm, {PhenotypeTermType} from "pedigree/terminology/phenotypeTerm";
+import GeneTerm from "pedigree/terminology/geneTerm";
 
 /**
  * Class responsible for keeping track of HPO terms and their properties, and for
  * caching disorders data as loaded from the OMIM database.
  * This information is graphically displayed in a 'Legend' box
  *
- * @class HPOLegend
+ * @class PhenotypeLegend
  * @constructor
  */
-var HPOLegend = Class.create( Legend, {
+var PhenotypeLegend = Class.create( Legend, {
 
   initialize: function($super) {
     $super('Phenotypes');
@@ -28,15 +30,15 @@ var HPOLegend = Class.create( Legend, {
      * @method getTerm
      * @return {Object}
      */
-  getTerm: function(hpoID) {
-    hpoID = HPOTerm.sanitizeID(hpoID);
-    if (!this._termCache.hasOwnProperty(hpoID)) {
+  getTerm: function(phenotypeID) {
+    phenotypeID = TerminologyManager.sanitizeID(PhenotypeTermType, phenotypeID);
+    if (!this._termCache.hasOwnProperty(phenotypeID)) {
       var whenNameIsLoaded = function() {
-        this._updateTermName(hpoID);
+        this._updateTermName(phenotypeID);
       };
-      this._termCache[hpoID] = new HPOTerm(hpoID, null, whenNameIsLoaded.bind(this));
+      this._termCache[phenotypeID] = new PhenotypeTerm(phenotypeID, null, whenNameIsLoaded.bind(this));
     }
-    return this._termCache[hpoID];
+    return this._termCache[phenotypeID];
   },
 
   /**
@@ -60,12 +62,16 @@ var HPOLegend = Class.create( Legend, {
      */
   addCase: function($super, id, name, nodeID) {
     if (!this._termCache.hasOwnProperty(id)) {
-      this._termCache[id] = new HPOTerm(id, name);
+      this._termCache[id] = new PhenotypeTerm(id, name);
     }
 
     $super(id, name, nodeID);
   },
-
+  addToCache: function(id, name){
+    if (!this._termCache.hasOwnProperty(id)) {
+      this._termCache[id] = new PhenotypeTerm(id, name);
+    }
+  },
   /**
      * Updates the displayed phenotype name for the given phenotype
      *
@@ -77,7 +83,14 @@ var HPOLegend = Class.create( Legend, {
     //console.log("updating phenotype display for " + id + ", name = " + this.getTerm(id).getName());
     var name = this._legendBox.down('li#' + this._getPrefix() + '-' + id + ' .disorder-name');
     name.update(this.getTerm(id).getName());
+  },
+  getCurrentPhenotypes : function(){
+    var currentPhenotypes = [];
+    for (var id in this._affectedNodes){
+      currentPhenotypes.push(this.getTerm(id));
+    }
+    return currentPhenotypes;
   }
 });
 
-export default HPOLegend;
+export default PhenotypeLegend;

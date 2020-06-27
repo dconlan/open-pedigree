@@ -1,7 +1,8 @@
 import Raphael from 'pedigree/raphael';
-import { isInt } from 'pedigree/model/helpers';
-import Disorder from 'pedigree/disorder';
 import Legend from 'pedigree/view/legend';
+import DisorderTerm, {DisorderTermType} from "pedigree/terminology/disorderTerm";
+import TerminologyManager from "pedigree/terminology/terminologyManger";
+import GeneTerm from "pedigree/terminology/geneTerm";
 
 /**
  * Class responsible for keeping track of disorders and their properties, and for
@@ -11,7 +12,7 @@ import Legend from 'pedigree/view/legend';
  * @class DisorderLegend
  * @constructor
  */
-var DisorgerLegend = Class.create( Legend, {
+var DisorderLegend = Class.create( Legend, {
 
   initialize: function($super) {
     $super('Disorders');
@@ -36,15 +37,13 @@ var DisorgerLegend = Class.create( Legend, {
      * @method getDisorder
      * @return {Object}
      */
-  getDisorder: function(disorderID) {
-    if (!isInt(disorderID)) {
-      disorderID = Disorder.sanitizeID(disorderID);
-    }
+  getTerm: function(disorderID) {
+    disorderID = TerminologyManager.sanitizeID(DisorderTermType, disorderID);
     if (!this._disorderCache.hasOwnProperty(disorderID)) {
       var whenNameIsLoaded = function() {
         this._updateDisorderName(disorderID);
       };
-      this._disorderCache[disorderID] = new Disorder(disorderID, null, whenNameIsLoaded.bind(this));
+      this._disorderCache[disorderID] = new DisorderTerm(disorderID, null, whenNameIsLoaded.bind(this));
     }
     return this._disorderCache[disorderID];
   },
@@ -60,12 +59,16 @@ var DisorgerLegend = Class.create( Legend, {
      */
   addCase: function($super, disorderID, disorderName, nodeID) {
     if (!this._disorderCache.hasOwnProperty(disorderID)) {
-      this._disorderCache[disorderID] = new Disorder(disorderID, disorderName);
+      this._disorderCache[disorderID] = new DisorderTerm(disorderID, disorderName);
     }
 
     $super(disorderID, disorderName, nodeID);
   },
-
+  addToCache: function(id, name){
+    if (!this._disorderCache.hasOwnProperty(id)) {
+      this._disorderCache[id] = new DisorderTerm(id, name);
+    }
+  },
   /**
      * Updates the displayed disorder name for the given disorder
      *
@@ -75,7 +78,7 @@ var DisorgerLegend = Class.create( Legend, {
      */
   _updateDisorderName: function(disorderID) {
     var name = this._legendBox.down('li#' + this._getPrefix() + '-' + disorderID + ' .disorder-name');
-    name.update(this.getDisorder(disorderID).getName());
+    name.update(this.getTerm(disorderID).getName());
   },
 
   /**
@@ -147,7 +150,15 @@ var DisorgerLegend = Class.create( Legend, {
       }
       return randomColor;
     }
+  },
+
+  getCurrentDisorders : function(){
+    var currentDisorders = [];
+    for (var id in this._affectedNodes){
+      currentDisorders.push(this.getTerm(id));
+    }
+    return currentDisorders;
   }
 });
 
-export default DisorgerLegend;
+export default DisorderLegend;

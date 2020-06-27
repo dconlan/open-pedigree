@@ -149,12 +149,19 @@ var SaveLoadEngine = Class.create( {
 
 
     if (patientDataUrl) {
+      document.fire('pedigree:save:start');
       var image = $('canvas');
       var background = image.getElementsByClassName('panning-background')[0];
       var backgroundPosition = background.nextSibling;
       var backgroundParent =  background.parentNode;
       backgroundParent.removeChild(background);
       var bbox = image.down().getBBox();
+      var pedigreeImage = image.innerHTML.replace(/xmlns:xlink=".*?"/, '')
+          .replace(/width=".*?"/, '')
+          .replace(/height=".*?"/, '')
+          .replace(/viewBox=".*?"/, 'viewBox="' + bbox.x + ' ' + bbox.y + ' ' + bbox.width + ' ' + bbox.height + '" width="' + bbox.width + '" height="' + bbox.height + '" xmlns:xlink="http://www.w3.org/1999/xlink"');
+      var context = window.location.href.replace(/&/g,'&amp;');
+      pedigreeImage = pedigreeImage.split(context).join('');
 
       var uri = new URI(patientDataUrl);
       if (uri.protocol() == 'local' ) {
@@ -168,7 +175,7 @@ var SaveLoadEngine = Class.create( {
         if (format === "fhir"){
           // var patientFhirRef = (this._context) ? this._context.patientFhirRef : null;
           var patientFhirRef = null;
-          jsonData = PedigreeExport.exportAsFHIR(editor.getGraph().DG, "all", patientFhirRef);
+          jsonData = PedigreeExport.exportAsFHIR(editor.getGraph().DG, "all", patientFhirRef, pedigreeImage);
         }
         // else if (this._saveAs === "simpleJSON"){
         //   jsonData = PedigreeExport.exportAsSimpleJSON(editor.getGraph().DG, "all");;
@@ -184,7 +191,7 @@ var SaveLoadEngine = Class.create( {
         localStorage.setItem(localStorageKey, JSON.stringify(data, null, 2));
 
         console.log("[SAVE] to local storage : " + localStorageKey + " as " + format);
-
+        document.fire('pedigree:save:complete');
         if (closeOnSave === 'true' || closeOnSave === ''){
           console.log("Attempt to close the window");
           window.close();
@@ -202,9 +209,10 @@ var SaveLoadEngine = Class.create( {
           },
           onComplete: function() {
             me._saveInProgress = false;
+            document.fire('pedigree:save:complete');
           },
           onSuccess: function() {},
-          parameters: {'property#data': jsonData, 'property#image': image.innerHTML.replace(/xmlns:xlink=".*?"/, '').replace(/width=".*?"/, '').replace(/height=".*?"/, '').replace(/viewBox=".*?"/, 'viewBox="' + bbox.x + ' ' + bbox.y + ' ' + bbox.width + ' ' + bbox.height + '" width="' + bbox.width + '" height="' + bbox.height + '" xmlns:xlink="http://www.w3.org/1999/xlink"')}
+          parameters: {'property#data': jsonData, 'property#image': pedigreeImage}
         });
       }
       backgroundParent.insertBefore(background, backgroundPosition);

@@ -1,5 +1,9 @@
 import BaseGraph from 'pedigree/model/baseGraph';
 import RelationshipTracker from "pedigree/model/relationshipTracker";
+import TerminologyManager from "pedigree/terminology/terminologyManger";
+import {GeneTermType} from "pedigree/terminology/geneTerm";
+import {DisorderTermType} from "pedigree/terminology/disorderTerm";
+import {PhenotypeTermType} from "pedigree/terminology/phenotypeTerm";
 
 
 var FHIRConverter = function() {
@@ -24,6 +28,8 @@ FHIRConverter.initFromFHIR = function(inputText) {
 		throw "Unable to import pedigree: input is not a valid JSON string "
 				+ err;
 	}
+	let twinTracker = { 'nextTwinGroupId' : 0 , 'lookup': {}};
+
 	// if (inputResource.resourceType === "Composition") {
 	// 	// first see if we have extension with raw data
 	// 	if (inputResource.extension) {
@@ -71,7 +77,7 @@ FHIRConverter.initFromFHIR = function(inputText) {
 		// first pass: add all vertices and assign vertex IDs
 		for (let i = 0; i < familyHistoryResources.length; i++) {
 			let nextPerson = this.extractDataFromFMH(familyHistoryResources[i],
-					subjectResource, containedResourcesLookup);
+					subjectResource, containedResourcesLookup, twinTracker);
 			nodeData.push(nextPerson);
 
 			if (!nextPerson.properties.hasOwnProperty("id")
@@ -217,7 +223,7 @@ FHIRConverter.initFromFHIR = function(inputText) {
 };
 
 FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
-		subjectResource, containedResourcesLookup) {
+		subjectResource, containedResourcesLookup, twinTracker) {
 	let properties = {};
 	let result = {
 		"properties" : properties
@@ -225,6 +231,16 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 
 	properties.id = familyHistoryResource.id;
 	properties.gender = "U";
+
+	let lookForTwins = true;
+	if (twinTracker.lookup.hasOwnProperty(properties.id)){
+		let twinDataForThisNode = twinTracker.lookup[properties.id];
+		properties.twinGroup = twinDataForThisNode.twinGroup;
+		if (twinDataForThisNode.hasOwnProperty('monozygotic')){
+			properties.monozygotic = twinDataForThisNode.monozygotic;
+		}
+		lookForTwins = false;
+	}
 
 	if (familyHistoryResource.sex) {
 		let foundCode = false;
@@ -266,6 +282,15 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 			}
 		}
 	}
+
+	if (familyHistoryResource.identifier){
+		for (let i = 0; i < familyHistoryResource.identifier.length; i++) {
+			if (familyHistoryResource.identifier[i].system === "https://github.com/phenotips/open-pedigree?externalID"){
+				properties.externalID = familyHistoryResource.identifier[i].value;
+				break;
+			}
+		}
+	}
 	let dateSplitter = /([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2]|[1-9])(-(0[1-9]|[1-2][0-9]|3[0-1]|[1-9]))?)?/;
 	if (familyHistoryResource.bornDate) {
 		let bornDateSplit = dateSplitter.exec(familyHistoryResource.bornDate);
@@ -291,14 +316,31 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 			properties.dod = month + "/" + day + "/" + year;
 		}
 	}
+
+	if (familyHistoryResource.deceasedString) {
+		let deceasedSplitter = /(stillborn|miscarriage|aborted|unborn)( ([1-9][0-9]?) weeks)?/;
+		let deceasedSplit = deceasedSplitter.exec(familyHistoryResource.deceasedString);
+		if (deceasedSplit == null) {
+			// not something we understand
+			properties.lifeStatus = 'deceased';
+		} else {
+			properties.lifeStatus = deceasedSplit[1];
+			if (deceasedSplit[3]){
+				properties.gestationAge = deceasedSplit[3];
+			}
+		}
+	}
+	if (familyHistoryResource.deceasedBoolean) {
+		properties.lifeStatus = 'deceased';
+	}
+
 	if (familyHistoryResource.note && familyHistoryResource.note[0].text) {
 		properties.comments = familyHistoryResource.note[0].text;
 	}
 	if (familyHistoryResource.condition) {
 		let disorders = [];
-		//@todo fix getting system
-		// let disorderSystem = LookupManager.getCodeSystem('disorder');//editor.getDisorderSystem();
-		let disorderSystem = 'http://www.omim.org';
+		// let disorderSystem = 'http://www.omim.org';
+		let disorderSystem = TerminologyManager.getCodeSystem(DisorderTermType);//editor.getDisorderSystem();
 		for (let i = 0; i < familyHistoryResource.condition.length; i++) {
 			let condition = familyHistoryResource.condition[i].code;
 			if (condition && condition.coding) {
@@ -337,6 +379,11 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 		let possibleMother = [];
 		let possibleFather = [];
 		let possibleParent = [];
+		let twinCodes = [ "TWINSIS", "TWINBRO" ];
+		let fraternalTwinCodes = [ "FTWINSIS", "FTWINBRO", "TWIN" ];
+		let twinRegex = /twin/gi;
+		let possibleTwins = null;
+
 		for (let i = 0; i < extensions.length; i++) {
 			let ex = extensions[i];
 			if (ex.url === "http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-parent") {
@@ -352,7 +399,7 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 								if (motherCodes.includes(codings[k].code)) {
 									type = "mother";
 								} else if (fatherCodes
-										.includes(codings[k].code)) {
+									.includes(codings[k].code)) {
 									type = "father";
 								} else {
 									type = "parent";
@@ -368,10 +415,10 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 						}
 						if (type == null && subEx.valueCodeableConcept.text) {
 							if (motherRegex
-									.test(subEx.valueCodeableConcept.text)) {
+								.test(subEx.valueCodeableConcept.text)) {
 								type = "mother";
 							} else if (fatherRegex
-									.test(subEx.valueCodeableConcept.text)) {
+								.test(subEx.valueCodeableConcept.text)) {
 								type = "father";
 							}
 						}
@@ -409,10 +456,10 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 							}
 							if (!foundCode && parentResource.sex.text) {
 								if (familyHistoryResource.sex.text
-										.toLowerCase() === "male") {
+									.toLowerCase() === "male") {
 									type = "father";
 								} else if (familyHistoryResource.sex.text
-										.toLowerCase() === "female") {
+									.toLowerCase() === "female") {
 									type = "mother";
 								}
 							}
@@ -427,64 +474,142 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 				} else {
 					possibleParent.push(parentId);
 				}
+			} else if (ex.url === "http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-sibling") {
+				let type = null;
+				let ref = null;
+				let subExtensions = ex.extension;
+				for (let j = 0; j < subExtensions.length; j++) {
+					let subEx = subExtensions[j];
+					if (subEx.url === "type") {
+						let codings = subEx.valueCodeableConcept.coding;
+						for (let k = 0; k < codings.length; k++) {
+							if (codings[k].system === "http://terminology.hl7.org/CodeSystem/v3-RoleCode") {
+								if (twinCodes.includes(codings[k].code)) {
+									type = "twin";
+								} else if (fraternalTwinCodes
+									.includes(codings[k].code)) {
+									type = "ftwin";
+								} else {
+									type = "sibling";
+								}
+								break;
+							} else if (codings[k].display) {
+								if (twinRegex.test(codings[k].display)) {
+									type = "ftwin";
+								}
+							}
+						}
+						if (type == null && subEx.valueCodeableConcept.text) {
+							if (twinRegex.test(subEx.valueCodeableConcept.text)) {
+								type = "ftwin";
+							}
+						}
+						if (type == null) {
+							type = "sibling";
+						}
+					} else if (subEx.url === "reference") {
+						ref = subEx.valueReference.reference;
+					}
+				}
+				if (ref == null || type == null || type === 'sibling') {
+					// we didn't find the reference or its a sibling not a twin
+					break;
+				}
+				if (possibleTwins == null){
+					possibleTwins = {};
+				}
+				possibleTwins[ref] = type;
 			} else if (ex.url === "http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-observation") {
 				let observationRef = ex.valueReference.reference;
 				let observationResource = containedResourcesLookup[observationRef];
 				if (observationResource) {
 					let clinical = "fmh_clinical";
 					let genes = "fmh_genes";
+					let carrierOb = "fmh_carrierStatus";
+					let childlessOb = "fmh_childlessStatus";
 					let isSympton = false;
 					let isGene = false;
 					let value = null;
-					//@todo fix getting system
-					// let hpoSystem = LookupManager.getCodeSystem('phenotype');
-					// let geneSystem = LookupManager.getCodeSystem('gene');
-					let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
-					let geneSystem = 'http://www.genenames.org';
-					if (observationResource.id.substring(0, clinical.length) === clinical) {
-						isSympton = true;
-					} else if (observationResource.id.substring(0, genes.length) === genes) {
-						isGene = false;
-					}
-					if (observationResource.valueString){
-						value = observationResource.valueString;
-					}
-					else if (observationResource.valueCodeableConcept){
-						if (observationResource.valueCodeableConcept.coding){
+					// let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
+					// let geneSystem = 'http://www.genenames.org';
+					let hpoSystem = TerminologyManager.getCodeSystem(PhenotypeTermType);
+					let geneSystem = TerminologyManager.getCodeSystem(GeneTermType);
+					if (observationResource.id.substring(0, carrierOb.length) === carrierOb) {
+						if (observationResource.valueCodeableConcept){
 							for (let cIndex = 0; cIndex < observationResource.valueCodeableConcept.coding.length; cIndex++){
 								let coding = observationResource.valueCodeableConcept.coding[cIndex];
-								if (coding.system === geneSystem){
-									isGene = true;
-									value = coding.code;
+								if (coding.system === 'http://snomed.info/sct' && coding.code === '87955000'){
+									properties['carrierStatus'] =  'carrier';
 									break;
 								}
-								if (coding.system === hpoSystem){
-									isSympton = true;
-									value = coding.code;
+								if (coding.system === 'http://snomed.info/sct' && coding.code === '24800002'){
+									properties['carrierStatus'] =  'presymptomatic';
 									break;
 								}
 							}
-						}
-						if (value == null && observationResource.valueCodeableConcept.text){
-							value = observationResource.valueCodeableConcept.text;
 						}
 					}
-					if (value != null) {
-						if (isSympton) {
-							if (!properties.hpoTerms) {
-								properties.hpoTerms = [];
+					else if (observationResource.id.substring(0, childlessOb.length) === childlessOb){
+						if (observationResource.code){
+							for (let cIndex = 0; cIndex < observationResource.code.coding.length; cIndex++){
+								let coding = observationResource.code.coding[cIndex];
+								if (coding.system === 'http://snomed.info/sct' && coding.code === '8619003'){
+									properties['childlessStatus'] =  'infertile';
+									break;
+								}
+								if (coding.system === 'http://snomed.info/sct' && coding.code === '224118004'
+									&& observationResource.valueInteger === 0){
+									properties['childlessStatus'] =  'childless';
+									break;
+								}
 							}
-							properties.hpoTerms.push(value);
-						} else if (isGene) {
-							if (!properties.candidateGenes) {
-								properties.candidateGenes = [];
+						}
+					}
+					else {
+						if (observationResource.id.substring(0, clinical.length) === clinical) {
+							isSympton = true;
+						} else if (observationResource.id.substring(0, genes.length) === genes) {
+							isGene = true;
+						}
+						if (observationResource.valueString){
+							value = observationResource.valueString;
+						}
+						else if (observationResource.valueCodeableConcept){
+							if (observationResource.valueCodeableConcept.coding){
+								for (let cIndex = 0; cIndex < observationResource.valueCodeableConcept.coding.length; cIndex++){
+									let coding = observationResource.valueCodeableConcept.coding[cIndex];
+									if (coding.system === geneSystem){
+										isGene = true;
+										value = coding.code;
+										break;
+									}
+									if (coding.system === hpoSystem){
+										isSympton = true;
+										value = coding.code;
+										break;
+									}
+								}
 							}
-							properties.candidateGenes.push(value);
+							if (value == null && observationResource.valueCodeableConcept.text){
+								value = observationResource.valueCodeableConcept.text;
+							}
+						}
+						if (value != null) {
+							if (isSympton) {
+								if (!properties.hpoTerms) {
+									properties.hpoTerms = [];
+								}
+								properties.hpoTerms.push(value);
+							} else if (isGene) {
+								if (!properties.candidateGenes) {
+									properties.candidateGenes = [];
+								}
+								properties.candidateGenes.push(value);
+							}
 						}
 					}
 				}
 			}
-
 		}
 		if (possibleMother.length === 1) {
 			result.mother = possibleMother[0];
@@ -498,7 +623,7 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 		if (!result.mother && possibleFather.length > 1) {
 			result.mother = possibleFather[1];
 		}
-		if (possibleParent.length === 1) {
+		if (possibleParent.length > 0) {
 			if (!result.mother) {
 				result.mother = possibleParent[0];
 			} else if (!result.father) {
@@ -510,6 +635,40 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 				result.mother = possibleParent[1];
 			} else if (!result.father) {
 				result.father = possibleParent[1];
+			}
+		}
+		if (lookForTwins && possibleTwins != null){
+			// first check if all same type
+			let isFraternal = false;
+			let twinsToAdd = [];
+			for (let key in possibleTwins){
+				if (containedResourcesLookup[key]){
+					twinsToAdd.push(containedResourcesLookup[key].id);
+				}
+				else {
+					// don't check references we can't find
+					continue;
+				}
+				if (possibleTwins[key] === 'ftwin'){
+					isFraternal = true;
+					break;
+				}
+			}
+			if (twinsToAdd){
+				// we found some twins
+				let twinGroup = twinTracker.nextTwinGroupId;
+				twinTracker.nextTwinGroupId = twinTracker.nextTwinGroupId + 1;
+				properties.twinGroup = twinGroup;
+				if (!isFraternal){
+					properties.monozygotic = true;
+				}
+				for (let i = 0; i < twinsToAdd.length; i++){
+					let twinData = { twinGroup: twinGroup};
+					if (!isFraternal){
+						twinData.monozygotic = true;
+					}
+					twinTracker.lookup[twinsToAdd[i]] = twinData;
+				}
 			}
 		}
 	}
@@ -538,7 +697,7 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
  * ===============================================================================================
  */
 
-FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientReference) {
+FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientReference, pedigreeImage) {
 	// let exportObj = [];
 	let today = new Date();
 	let tz = today.getTimezoneOffset();
@@ -615,14 +774,40 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
 		containedResources.push(fhirPatient);
 	}
 
+	if (pedigreeImage){
+
+		let pedigreeImageRef = '#pedigreeImage';
+		fhr_json.section.push({
+			"title" : "Pedigree Diagram",
+			"entry" : [{
+				"type" : "DocumentReference",
+				"reference" : "#pedigreeImage"
+			}]
+		});
+		let pedigreeImageDocumentReference = {
+			"id" : "pedigreeImage",
+			"resourceType" : "DocumentReference",
+			"status" : "current",
+			"docStatus" : "preliminary",
+			"subject": patientReference,
+			"description": "Pedigree Diagram of Family in SVG format",
+			"content": {
+				"attachment": {
+					"contentType": "image/svg+xml",
+					"data": btoa(unescape(encodeURIComponent(pedigreeImage)))
+				}
+			}
+		};
+		containedResources.push(pedigreeImageDocumentReference);
+	}
+
 	if (pedigree.GG.properties[0]['disorders']) {
 		let disorders = pedigree.GG.properties[0]['disorders'];
 		let disorderLegend = editor.getDisorderLegend();
-		//@todo fix getting system
-		// let disorderSystem = LookupManager.getCodeSystem('disorder');//editor.getDisorderSystem();
-		let disorderSystem = 'http://www.omim.org';
+		// let disorderSystem = 'http://www.omim.org';
+		let disorderSystem = TerminologyManager.getCodeSystem(DisorderTermType);//editor.getDisorderSystem();
 		for (let i = 0; i < disorders.length; i++) {
-			let disorderTerm = disorderLegend.getDisorder(disorders[i]);
+			let disorderTerm = disorderLegend.getTerm(disorders[i]);
 			let fhirCondition = null;
 			if (disorderTerm.getName() === disorders[i]){
 				// name and ID the same, must not be from omim
@@ -690,9 +875,8 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
 		if (nodeProperties['hpoTerms']) {
 			let hpoTerms = nodeProperties['hpoTerms'];
 			let hpoLegend = editor.getHPOLegend();
-			//@todo fix code system
-			// let hpoSystem =  LookupManager.getCodeSystem('phenotype');
-			let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
+			// let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
+			let hpoSystem =  TerminologyManager.getCodeSystem(PhenotypeTermType);
 
 			for (let j = 0; j < hpoTerms.length; j++) {
 				let fhirObservation = {
@@ -724,9 +908,8 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
 		if (nodeProperties['candidateGenes']) {
 			let candidateGenes = nodeProperties['candidateGenes'];
 			let geneLegend = editor.getGeneLegend();
-			//@todo fix code system
-			// let geneSystem = LookupManager.getCodeSystem('gene');
-			let geneSystem = 'http://www.genenames.org';
+			//let geneSystem = 'http://www.genenames.org';
+			let geneSystem = TerminologyManager.getCodeSystem(GeneTermType);
 			for (let j = 0; j < candidateGenes.length; j++) {
 				// @TODO change to use http://build.fhir.org/ig/HL7/genomics-reporting/obs-region-studied.html
 				let fhirObservation = {
@@ -740,6 +923,81 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
 				}
 				else {
 					fhirObservation["valueCodeableConcept"] = { "coding" : [ { "system" : geneSystem, "code" : candidateGenes[i], "display" : geneTerm.getName() } ] };
+				}
+				if (i === 0) {
+					// we are talking about the patient
+					fhirObservation['subject'] = patientReference;
+				} else {
+					fhirObservation['focus'] = {
+						"type" : "FamilyMemberHistory",
+						"reference" : "#" + fmhResource.id
+					};
+				}
+				observations.push(fhirObservation);
+			}
+		}
+
+		//carrierStatus -'affected' or 'carrier' 'presymptomatic'
+		// For carrier status:
+		// Carrier:
+		//   Code: 87955000 | Carrier state, disease expressed |
+		//   Value: empty
+		// Pre-symptomatic:
+		//   Code: 24800002 | Carrier state, disease not expressed |
+		//   Value: empty
+		if (nodeProperties['carrierStatus']) {
+			let carrierCode = undefined;
+			if (nodeProperties['carrierStatus'] === 'carrier'){
+				carrierCode = { "coding" : [ { "system" : 'http://snomed.info/sct', "code" :'87955000', "display" : 'Carrier state, disease expressed' } ] };
+			}
+			else if (nodeProperties['carrierStatus'] === 'presymptomatic') {
+				carrierCode = { "coding" : [ { "system" : 'http://snomed.info/sct', "code" :'24800002', "display" : 'Carrier state, disease not expressed' } ] };
+			}
+			if (carrierCode) {
+				let fhirObservation = {
+					"resourceType" : "Observation",
+					"id" : "fmh_carrierStatus_" + i,
+					"status" : "preliminary",
+					"valueCodeableConcept": carrierCode
+				};
+				if (i === 0) {
+					// we are talking about the patient
+					fhirObservation['subject'] = patientReference;
+				} else {
+					fhirObservation['focus'] = {
+						"type" : "FamilyMemberHistory",
+						"reference" : "#" + fmhResource.id
+					};
+				}
+				observations.push(fhirObservation);
+			}
+		}
+		//childlessStatus - 'childless' or 'infertile'
+		//Childless:
+		//   Code: 224118004 | Number of offspring |
+		//   Value: 0
+		// Infertile:
+		//   Code: 8619003 | Infertile |
+		//   Value: empty
+		if (nodeProperties['childlessStatus']) {
+			let childlessCode = undefined;
+			let addZeroValue = false;
+			if (nodeProperties['childlessStatus'] === 'childless'){
+				childlessCode = { "coding" : [ { "system" : 'http://snomed.info/sct', "code" :'224118004', "display" : 'Number of offspring' } ] };
+				addZeroValue = true;
+			}
+			else if (nodeProperties['childlessStatus'] === 'infertile') {
+				childlessCode = { "coding" : [ { "system" : 'http://snomed.info/sct', "code" :'8619003', "display" : 'Infertile' } ] };
+			}
+			if (childlessCode) {
+				let fhirObservation = {
+					"resourceType" : "Observation",
+					"id" : "fmh_childlessStatus_" + i,
+					"status" : "preliminary",
+					"code": childlessCode
+				};
+				if (addZeroValue){
+					fhirObservation['valueInteger'] = 0;
 				}
 				if (i === 0) {
 					// we are talking about the patient
@@ -1941,6 +2199,28 @@ FHIRConverter.buildGeneticsParentExtension = function(index, relationship) {
 
 };
 
+FHIRConverter.buildGeneticsSiblingExtension = function(index, relationship) {
+
+	let fullRelationship = FHIRConverter.familyHistoryLookup[relationship];
+	let ref = "#FMH_" + index;
+
+	return {
+		"url" : "http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-sibling",
+		"extension" : [ {
+			"url" : "type",
+			"valueCodeableConcept" : {
+				"coding" : [ fullRelationship ]
+			}
+		}, {
+			"url" : "reference",
+			"valueReference" : {
+				"reference" : ref
+			}
+		} ]
+	};
+
+};
+
 FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 		relationship, patientRef) {
 
@@ -1983,6 +2263,28 @@ FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 
 		}
 	}
+	let twinGroupId = pedigree.GG.getTwinGroupId(index);
+	if (twinGroupId != null){
+		// this person is a twin
+		let siblingsToAdd = pedigree.GG.getAllTwinsOf(index);
+		for (let i=0; i < siblingsToAdd.length; i++) {
+			if (siblingsToAdd[i] != index) {
+				let siblingId = siblingsToAdd[i];
+				let gender = pedigree.GG.getGender(siblingId);
+				let monozygotic = pedigree.GG.properties[siblingId]['monozygotic'] === true;
+				let rel = "TWIN";
+				if (gender === 'F') {
+					rel = (monozygotic) ? "TWINSIS" : "FTWINSIS";
+				}
+				else if (gender === 'M') {
+					rel = (monozygotic) ? "TWINBRO" : "FTWINBRO";
+				}
+				// there is no code for fraternal twin (genderless)
+				extensions.push(this.buildGeneticsSiblingExtension(siblingId, rel));
+			}
+		}
+	}
+
 	let fullRelationship = FHIRConverter.familyHistoryLookup[relationship];
 	if (!fullRelationship) {
 		if (relationship) {
@@ -1991,16 +2293,25 @@ FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 			fullRelationship = FHIRConverter.familyHistoryLookup["FAMMEMB"];
 		}
 	}
-	let name = "Family member " + index;
+	let name = '';
 	if (privacySetting === "all") {
 		let lname = nodeProperties['lName'] || "";
 		let fname = nodeProperties['fName'] || "";
 		if (lname && fname) {
-			name = lname + ", " + fname;
+			name = fname + " " + lname;
+		}
+		else if (lname){
+			name = lname;
+		}
+		else if (fname){
+			name = fname;
 		}
 		if (nodeProperties['lNameAtB'] && nodeProperties['lNameAtB'] !== lname) {
 			name = name + " (" + nodeProperties['lNameAtB'] + ")";
 		}
+	}
+	else {
+		name = "Family member " + index;
 	}
 	let sexCode = "unknown";
 	if (nodeProperties['gender'] === "F") {
@@ -2038,6 +2349,40 @@ FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 			fmhResource['deceasedDate'] = d.getFullYear() + '-'
 				+ (d.getMonth() < 9 ?'0' :'') + (d.getMonth() + 1) + '-' + (d.getDate() <= 9 ?'0' :'') + d.getDate();
 		}
+		else if (nodeProperties['lifeStatus']){
+			let lifeStatus = nodeProperties['lifeStatus'];
+			if (lifeStatus === 'stillborn' || lifeStatus === 'miscarriage' || lifeStatus === 'aborted' || lifeStatus === 'unborn'){
+				if (nodeProperties.hasOwnProperty('gestationAge')){
+					fmhResource['deceasedString'] = lifeStatus + ' ' + nodeProperties['gestationAge'] + ' weeks'
+				}
+				else {
+					fmhResource['deceasedString'] = lifeStatus;
+				}
+			}
+			else if (lifeStatus === 'deceased'){
+				fmhResource['deceasedBoolean'] = true;
+			}
+		}
+	}
+	else{
+		 if (nodeProperties['dod']){
+			 fmhResource['deceasedBoolean'] = true;
+		 }
+		 else if (nodeProperties['lifeStatus']){
+			 let lifeStatus = nodeProperties['lifeStatus'];
+			 if (lifeStatus === 'stillborn' || lifeStatus === 'miscarriage' || lifeStatus === 'aborted' || lifeStatus === 'unborn'){
+				 if (nodeProperties.hasOwnProperty('gestationAge')){
+					 fmhResource['deceasedString'] = lifeStatus + ' ' + nodeProperties['gestationAge'] + ' weeks'
+				 }
+				 else {
+					 fmhResource['deceasedString'] = lifeStatus;
+				 }
+			 }
+			 else if (lifeStatus === 'deceased'){
+				 fmhResource['deceasedBoolean'] = true;
+			 }
+		 }
+
 	}
 	if (privacySetting !== "minimal" && nodeProperties['comments']) {
 		fmhResource['note'] = [ {
@@ -2048,12 +2393,11 @@ FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 		let disorders = nodeProperties['disorders'];
 		let conditions = [];
 		let disorderLegend = editor.getDisorderLegend();
-		//@todo fix getting system
-		// let disorderSystem = LookupManager.getCodeSystem('disorder');//editor.getDisorderSystem();
-		let disorderSystem = 'http://www.omim.org';
+		// let disorderSystem = 'http://www.omim.org';
+		let disorderSystem = TerminologyManager.getCodeSystem(DisorderTermType);
 
 		for (let i = 0; i < disorders.length; i++) {
-			let disorderTerm = disorderLegend.getDisorder(disorders[i]);
+			let disorderTerm = disorderLegend.getTerm(disorders[i]);
 			if (disorderTerm.getName() === disorders[i]){
 				// name and ID the same, must not be from omim
 				conditions.push({
@@ -2076,6 +2420,13 @@ FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 			}
 		}
 		fmhResource['condition'] = conditions;
+	}
+
+	if (nodeProperties['externalID']){
+		fmhResource['identifier'] = [{
+			"system": "https://github.com/phenotips/open-pedigree?externalID",
+			"value": nodeProperties['externalID']
+		}];
 	}
 	return fmhResource;
 

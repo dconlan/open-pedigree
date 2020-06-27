@@ -9,9 +9,30 @@ import '../public/vendor/xwiki/colibri.css';
 import '../public/vendor/phenotips/Widgets.css';
 import '../public/vendor/phenotips/DateTimePicker.css';
 import '../public/vendor/phenotips/Skin.css';
+import '../public/vendor/selectize/selectize.default.css';
+import TerminologyManager from "pedigree/terminology/terminologyManger";
+import FHIRTerminology from "pedigree/terminology/FHIRTerminology";
 
 var editor;
 
 document.observe('dom:loaded',function() {
-  editor = new PedigreeEditor({patientDataUrl: 'local:pedigreeData?format=internal&closeOnSave=true'});
+
 });
+
+var OpenPedigree = OpenPedigree || {};
+
+OpenPedigree.initialiseEditor = function(options){
+  return new PedigreeEditor(options);
+};
+
+OpenPedigree.setFHIRTerminology = function(type, fhirBaseUrl, codeSystem, valueSet, validIdRegex, searchCount){
+  TerminologyManager.addTerminology(type,
+      new FHIRTerminology(type, codeSystem, validIdRegex, searchCount, fhirBaseUrl, valueSet));
+};
+
+OpenPedigree.setCTSSTerminology = function(type, ctssBaseUrl, codeSystem, validIdRegex, searchCount, valueColumn, textColumn){
+  TerminologyManager.addTerminology(type,
+      new CTSSTerminology(type, codeSystem, validIdRegex, searchCount, ctssBaseUrl, valueColumn, textColumn));
+};
+
+window.OpenPedigree = OpenPedigree;

@@ -23,6 +23,7 @@ var Controller = Class.create({
     document.observe('pedigree:person:newsibling',         this.handlePersonNewSibling);
     document.observe('pedigree:person:newpartnerandchild', this.handlePersonNewPartnerAndChild);
     document.observe('pedigree:partnership:newchild',      this.handleRelationshipNewChild);
+    document.observe('pedigree:reload',                    this.handleReload);
   },
 
   handleUndo: function(event) {
@@ -33,6 +34,9 @@ var Controller = Class.create({
     editor.getActionStack().redo();
   },
 
+  handleReload: function(event) {
+    editor.reloadPatient();
+  },
   handleClearGraph: function(event) {
     var changeSet = editor.getGraph().clearAll();
     editor.getView().applyChanges(changeSet, true);
