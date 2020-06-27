@@ -525,6 +525,8 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 				if (observationResource) {
 					let clinical = "fmh_clinical";
 					let genes = "fmh_genes";
+					let carrierOb = "fmh_carrierStatus";
+					let childlessOb = "fmh_childlessStatus";
 					let isSympton = false;
 					let isGene = false;
 					let value = null;
@@ -532,45 +534,78 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 					// let geneSystem = 'http://www.genenames.org';
 					let hpoSystem = TerminologyManager.getCodeSystem(PhenotypeTermType);
 					let geneSystem = TerminologyManager.getCodeSystem(GeneTermType);
-					if (observationResource.id.substring(0, clinical.length) === clinical) {
-						isSympton = true;
-					} else if (observationResource.id.substring(0, genes.length) === genes) {
-						isGene = false;
-					}
-					if (observationResource.valueString){
-						value = observationResource.valueString;
-					}
-					else if (observationResource.valueCodeableConcept){
-						if (observationResource.valueCodeableConcept.coding){
+					if (observationResource.id.substring(0, carrierOb.length) === carrierOb) {
+						if (observationResource.valueCodeableConcept){
 							for (let cIndex = 0; cIndex < observationResource.valueCodeableConcept.coding.length; cIndex++){
 								let coding = observationResource.valueCodeableConcept.coding[cIndex];
-								if (coding.system === geneSystem){
-									isGene = true;
-									value = coding.code;
+								if (coding.system === 'http://snomed.info/sct' && coding.code === '87955000'){
+									properties['carrierStatus'] =  'carrier';
 									break;
 								}
-								if (coding.system === hpoSystem){
-									isSympton = true;
-									value = coding.code;
+								if (coding.system === 'http://snomed.info/sct' && coding.code === '24800002'){
+									properties['carrierStatus'] =  'presymptomatic';
 									break;
 								}
 							}
-						}
-						if (value == null && observationResource.valueCodeableConcept.text){
-							value = observationResource.valueCodeableConcept.text;
 						}
 					}
-					if (value != null) {
-						if (isSympton) {
-							if (!properties.hpoTerms) {
-								properties.hpoTerms = [];
+					else if (observationResource.id.substring(0, childlessOb.length) === childlessOb){
+						if (observationResource.code){
+							for (let cIndex = 0; cIndex < observationResource.code.coding.length; cIndex++){
+								let coding = observationResource.code.coding[cIndex];
+								if (coding.system === 'http://snomed.info/sct' && coding.code === '8619003'){
+									properties['childlessStatus'] =  'infertile';
+									break;
+								}
+								if (coding.system === 'http://snomed.info/sct' && coding.code === '224118004'
+									&& observationResource.valueInteger === 0){
+									properties['childlessStatus'] =  'childless';
+									break;
+								}
 							}
-							properties.hpoTerms.push(value);
-						} else if (isGene) {
-							if (!properties.candidateGenes) {
-								properties.candidateGenes = [];
+						}
+					}
+					else {
+						if (observationResource.id.substring(0, clinical.length) === clinical) {
+							isSympton = true;
+						} else if (observationResource.id.substring(0, genes.length) === genes) {
+							isGene = true;
+						}
+						if (observationResource.valueString){
+							value = observationResource.valueString;
+						}
+						else if (observationResource.valueCodeableConcept){
+							if (observationResource.valueCodeableConcept.coding){
+								for (let cIndex = 0; cIndex < observationResource.valueCodeableConcept.coding.length; cIndex++){
+									let coding = observationResource.valueCodeableConcept.coding[cIndex];
+									if (coding.system === geneSystem){
+										isGene = true;
+										value = coding.code;
+										break;
+									}
+									if (coding.system === hpoSystem){
+										isSympton = true;
+										value = coding.code;
+										break;
+									}
+								}
 							}
-							properties.candidateGenes.push(value);
+							if (value == null && observationResource.valueCodeableConcept.text){
+								value = observationResource.valueCodeableConcept.text;
+							}
+						}
+						if (value != null) {
+							if (isSympton) {
+								if (!properties.hpoTerms) {
+									properties.hpoTerms = [];
+								}
+								properties.hpoTerms.push(value);
+							} else if (isGene) {
+								if (!properties.candidateGenes) {
+									properties.candidateGenes = [];
+								}
+								properties.candidateGenes.push(value);
+							}
 						}
 					}
 				}
@@ -588,7 +623,7 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
 		if (!result.mother && possibleFather.length > 1) {
 			result.mother = possibleFather[1];
 		}
-		if (possibleParent.length === 1) {
+		if (possibleParent.length > 0) {
 			if (!result.mother) {
 				result.mother = possibleParent[0];
 			} else if (!result.father) {
@@ -662,7 +697,7 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
  * ===============================================================================================
  */
 
-FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientReference) {
+FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientReference, pedigreeImage) {
 	// let exportObj = [];
 	let today = new Date();
 	let tz = today.getTimezoneOffset();
@@ -737,6 +772,33 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
 				privacySetting);
 
 		containedResources.push(fhirPatient);
+	}
+
+	if (pedigreeImage){
+
+		let pedigreeImageRef = '#pedigreeImage';
+		fhr_json.section.push({
+			"title" : "Pedigree Diagram",
+			"entry" : [{
+				"type" : "DocumentReference",
+				"reference" : "#pedigreeImage"
+			}]
+		});
+		let pedigreeImageDocumentReference = {
+			"id" : "pedigreeImage",
+			"resourceType" : "DocumentReference",
+			"status" : "current",
+			"docStatus" : "preliminary",
+			"subject": patientReference,
+			"description": "Pedigree Diagram of Family in SVG format",
+			"content": {
+				"attachment": {
+					"contentType": "image/svg+xml",
+					"data": btoa(unescape(encodeURIComponent(pedigreeImage)))
+				}
+			}
+		};
+		containedResources.push(pedigreeImageDocumentReference);
 	}
 
 	if (pedigree.GG.properties[0]['disorders']) {
@@ -861,6 +923,81 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
 				}
 				else {
 					fhirObservation["valueCodeableConcept"] = { "coding" : [ { "system" : geneSystem, "code" : candidateGenes[i], "display" : geneTerm.getName() } ] };
+				}
+				if (i === 0) {
+					// we are talking about the patient
+					fhirObservation['subject'] = patientReference;
+				} else {
+					fhirObservation['focus'] = {
+						"type" : "FamilyMemberHistory",
+						"reference" : "#" + fmhResource.id
+					};
+				}
+				observations.push(fhirObservation);
+			}
+		}
+
+		//carrierStatus -'affected' or 'carrier' 'presymptomatic'
+		// For carrier status:
+		// Carrier:
+		//   Code: 87955000 | Carrier state, disease expressed |
+		//   Value: empty
+		// Pre-symptomatic:
+		//   Code: 24800002 | Carrier state, disease not expressed |
+		//   Value: empty
+		if (nodeProperties['carrierStatus']) {
+			let carrierCode = undefined;
+			if (nodeProperties['carrierStatus'] === 'carrier'){
+				carrierCode = { "coding" : [ { "system" : 'http://snomed.info/sct', "code" :'87955000', "display" : 'Carrier state, disease expressed' } ] };
+			}
+			else if (nodeProperties['carrierStatus'] === 'presymptomatic') {
+				carrierCode = { "coding" : [ { "system" : 'http://snomed.info/sct', "code" :'24800002', "display" : 'Carrier state, disease not expressed' } ] };
+			}
+			if (carrierCode) {
+				let fhirObservation = {
+					"resourceType" : "Observation",
+					"id" : "fmh_carrierStatus_" + i,
+					"status" : "preliminary",
+					"valueCodeableConcept": carrierCode
+				};
+				if (i === 0) {
+					// we are talking about the patient
+					fhirObservation['subject'] = patientReference;
+				} else {
+					fhirObservation['focus'] = {
+						"type" : "FamilyMemberHistory",
+						"reference" : "#" + fmhResource.id
+					};
+				}
+				observations.push(fhirObservation);
+			}
+		}
+		//childlessStatus - 'childless' or 'infertile'
+		//Childless:
+		//   Code: 224118004 | Number of offspring |
+		//   Value: 0
+		// Infertile:
+		//   Code: 8619003 | Infertile |
+		//   Value: empty
+		if (nodeProperties['childlessStatus']) {
+			let childlessCode = undefined;
+			let addZeroValue = false;
+			if (nodeProperties['childlessStatus'] === 'childless'){
+				childlessCode = { "coding" : [ { "system" : 'http://snomed.info/sct', "code" :'224118004', "display" : 'Number of offspring' } ] };
+				addZeroValue = true;
+			}
+			else if (nodeProperties['childlessStatus'] === 'infertile') {
+				childlessCode = { "coding" : [ { "system" : 'http://snomed.info/sct', "code" :'8619003', "display" : 'Infertile' } ] };
+			}
+			if (childlessCode) {
+				let fhirObservation = {
+					"resourceType" : "Observation",
+					"id" : "fmh_childlessStatus_" + i,
+					"status" : "preliminary",
+					"code": childlessCode
+				};
+				if (addZeroValue){
+					fhirObservation['valueInteger'] = 0;
 				}
 				if (i === 0) {
 					// we are talking about the patient

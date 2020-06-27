@@ -37,7 +37,8 @@ var PedigreeEditor = Class.create({
     options = options || {};
 
     // URL to load patient data from and save data to
-    var patientDataUrl = options.patientDataUrl || '';
+    this._patientDataUrl = options.patientDataUrl || '';
+    var patientDataUrl = this._patientDataUrl;
     // URL to redirect the browser to on cancel/close
     var returnUrl = options.returnUrl || 'https://github.com/phenotips/open-pedigree';
     this.DEBUG_MODE = Boolean(options.DEBUG_MODE);
@@ -89,7 +90,7 @@ var PedigreeEditor = Class.create({
     this._saveLoadEngine = new SaveLoadEngine();
 
     // load proband data and load the graph after proband data is available
-    this._saveLoadEngine.load(patientDataUrl, this._saveLoadEngine);
+    this._saveLoadEngine.load(this._patientDataUrl, this._saveLoadEngine);
 
     this._controller = new Controller();
 
@@ -148,6 +149,10 @@ var PedigreeEditor = Class.create({
                   'Chrome, Safari v4+, Opera v10.5+ and most mobile browsers.');
     });
 
+  },
+
+  reloadPatient: function() {
+    this._saveLoadEngine.load(this._patientDataUrl, this._saveLoadEngine);
   },
 
   /**

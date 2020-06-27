@@ -85,8 +85,9 @@ PedigreeExport.exportAsPED = function(pedigree, idGenerationPreference) {
  * ===============================================================================================
  */
 
-PedigreeExport.exportAsFHIR = function(pedigree){
-  return FHIRConverter.exportAsFHIR(pedigree, "all", null);
+PedigreeExport.exportAsFHIR = function(pedigree, privacySetting = "all", fhirPatientReference = null,
+                                       pedigreeImage = null){
+  return FHIRConverter.exportAsFHIR(pedigree, privacySetting, fhirPatientReference, pedigreeImage);
 };
 
 // ===============================================================================================

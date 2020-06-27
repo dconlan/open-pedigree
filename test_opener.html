@@ -32,6 +32,20 @@
             var data = JSON.parse(storageEvent.newValue);
             $("#context").val(data.context);
             $("#data").val(data.value);
+            var FHIRdata = JSON.parse(data.value);
+            if (FHIRdata){
+              if (FHIRdata.contained){
+                for (let containedResource of FHIRdata.contained){
+                  console.log(containedResource)
+                  if (containedResource.id === 'pedigreeImage'){
+                    let svg = decodeURIComponent(escape(atob(containedResource.content.attachment.data)));
+                    var container = document.getElementById("SVGContainer");
+                    container.innerHTML = svg;
+                    break;
+                  }
+                }
+              }
+            }
         }
     }, false);
 
@@ -63,6 +77,7 @@
         console.log("Clearing");
         $("#context").val("");
         $("#data").val("");
+        $("#SVGContainer").empty();
     }
     // ]]>
 </script>
@@ -80,10 +95,10 @@
         <div class="form-group">
             <label for="ontologyServer">Ontology Server</label>
             <input type="text" class="form-control" id="ontologyServer" aria-describedby="contextHelp" placeholder="Enter Server of leave blank for default">
-            <small id="contextHelp" class="form-text text-muted">The ontology server used to lookup disorders and phenotypes</small>
+            <small id="ontologyHelp" class="form-text text-muted">The ontology server used to lookup disorders and phenotypes</small>
         </div>
         <div class="form-group">
-            <label for="mode">Mode</label>
+            <label>Mode</label>
             <div class="form-control">
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="radio" name="mode" id="hpoMode" value="HPO" checked="checked">
@@ -94,11 +109,11 @@
                     <label class="form-check-label" for="sctMode">SCT</label>
                 </div>
             </div>
-            <small id="contextHelp" class="form-text text-muted">Code system to use for disorders and phenotypes. The test example uses HPO, clear the input before changing to SCT</small>
+            <small class="form-text text-muted">Code system to use for disorders and phenotypes. The test example uses HPO, clear the input before changing to SCT</small>
         </div>
         <div class="form-group">
             <label for="data">Data</label>
-            <textarea class="form-control" id="data" rows="10" readOnly="true">{
+            <textarea class="form-control" id="data" rows="10" readonly>{
   "resourceType": "Composition",
   "status": "preliminary",
   "type": {
@@ -1751,6 +1766,9 @@
         <button type="button" id="editButton" class="btn btn-primary" onclick="openEditor(this)">Edit</button>
         <button type="button" id="clearButton" class="btn btn-primary" onclick="clearData(this)">Clear</button>
     </form>
+  <div class="row" id="SVGContainer">
+
+  </div>
 </div>
 </body>
 </html>
