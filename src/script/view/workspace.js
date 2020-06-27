@@ -163,8 +163,8 @@ var Workspace = Class.create({
       }, {
         name : 'output',
         items: [
-          { key : 'export',    label : 'Export', icon : 'download'},
-          { key : 'close',     label : 'Close', icon : 'sign-out'}
+          { key : 'export',    label : 'Export', icon : 'file-export'},
+          { key : 'close',     label : 'Close', icon : 'times'}
         ]
       }];
     } else {
@@ -172,13 +172,13 @@ var Workspace = Class.create({
         name : 'input',
         items: [
           { key : 'templates', label : 'Templates', icon : 'copy'},
-          { key : 'import',    label : 'Import', icon : 'upload'}
+          { key : 'import',    label : 'Import', icon : 'file-import'}
         ]
       }, {
         name : 'edit',
         items: [
           { key : 'undo',   label : 'Undo', icon : 'undo'},
-          { key : 'redo',   label : 'Redo', icon : 'repeat'}
+          { key : 'redo',   label : 'Redo', icon : 'redo'}
         ]
       }, {
         name : 'reset',
@@ -188,9 +188,9 @@ var Workspace = Class.create({
       }, {
         name : 'output',
         items: [
-          { key : 'export',    label : 'Export', icon : 'download'},
+          { key : 'export',    label : 'Export', icon : 'file-export'},
           { key : 'save',    label : 'Save', icon : 'save'},
-          { key : 'close',     label : 'Close', icon : 'sign-out'}
+          { key : 'close',     label : 'Close', icon : 'times'}
         ]
       }];
     }
