@@ -1272,6 +1272,12 @@ DynamicPositionedGraph.prototype = {
         return null;
       }  // no changes
     }
+    else if (importType == 'GA4GH') {
+      var baseGraph = PedigreeImport.initFromGA4GH(importString);
+      if (!this._recreateUsingBaseGraph(baseGraph)) {
+        return null;
+      }  // no changes
+    }
 
     //this._debugPrintAll("after");
 

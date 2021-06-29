@@ -885,6 +885,54 @@ BaseGraph.prototype = {
   },
 
 
+  getRelationshipNode: function(v1, v2) {
+    if (!this.isPerson(v1) || !this.isPerson(v1)) {
+      throw 'Assertion failed: attempting to get relationship of a non-person';
+    }
+
+    var relationships = this.v[v1];
+
+    for (var r = 0; r < relationships.length; ++r) {
+      var edgeTo       = relationships[r];
+      var relationship = this.downTheChainUntilNonVirtual(edgeTo);
+      var partners = this.getParents(relationships);
+      if (partners[0] == v2 || partners[1] == v2) {
+        return relationship;
+      }
+    }
+    return null;
+  },
+
+  getUniqueParentsFor: function(v){
+    const allParents = new Set();
+    for (let child of v){
+      for (let parent of this.getParents(child)){
+        allParents.add(parent);
+      }
+    }
+    return allParents;
+  },
+
+  getParentGenerations: function(v, generations){
+
+    let immediateParents = this.getUniqueParentsFor([v])
+
+    const allParents = new Set(immediateParents);
+
+    for (let i = 1; i< generations; i++){
+      if (immediateParents.size > 0){
+        immediateParents = this.getUniqueParentsFor(immediateParents);
+        for (let parent of immediateParents){
+          allParents.add(parent);
+        }
+      }
+      else {
+        // no more parents
+        break;
+      }
+    }
+    return allParents;
+  }
 };
 
 export default BaseGraph;

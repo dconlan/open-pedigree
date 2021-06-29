@@ -31,6 +31,7 @@ var ExportSelector = Class.create( {
     var typeListElement = new Element('table');
     typeListElement.insert(_addTypeOption(true,  'PED', 'ped'));
     typeListElement.insert(_addTypeOption(false,  'FHIR', 'fhir'));
+    typeListElement.insert(_addTypeOption(false,  'GA4GH FHIR', 'GA4GH'));
 
     var fileDownload = new Element('a', {'id': 'downloadLink', 'style': 'display:none'});
     mainDiv.insert(fileDownload);
@@ -116,6 +117,11 @@ var ExportSelector = Class.create( {
     else if (exportType == 'fhir') {
       var exportString = PedigreeExport.exportAsFHIR(editor.getGraph().DG);
       var fileName = 'open-pedigree-fhir.json';
+      var mimeType = 'application/fhir+json';
+    }
+    else if (exportType == 'GA4GH') {
+      var exportString = PedigreeExport.exportAsGA4GH(editor.getGraph().DG);
+      var fileName = 'open-pedigree-GA4GH-fhir.json';
       var mimeType = 'application/fhir+json';
     }
 

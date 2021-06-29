@@ -1,4 +1,5 @@
 import FHIRConverter from 'pedigree/model/FHIRConverter'
+import GA4GHFHIRConverter from 'pedigree/model/GA4GHFHIRConverter'
 
 var PedigreeExport = function () {
 };
@@ -88,6 +89,19 @@ PedigreeExport.exportAsPED = function(pedigree, idGenerationPreference) {
 PedigreeExport.exportAsFHIR = function(pedigree, privacySetting = "all", fhirPatientReference = null,
                                        pedigreeImage = null){
   return FHIRConverter.exportAsFHIR(pedigree, privacySetting, fhirPatientReference, pedigreeImage);
+};
+
+
+/* ===============================================================================================
+ *
+ * Creates and returns a JSON in the "GA4GH FHIR JSON" format
+ *
+ * ===============================================================================================
+ */
+
+PedigreeExport.exportAsGA4GH = function(pedigree, privacySetting = "all", fhirPatientReference = null,
+                                       pedigreeImage = null){
+  return GA4GHFHIRConverter.exportAsFHIR(pedigree, privacySetting, fhirPatientReference, pedigreeImage);
 };
 
 // ===============================================================================================

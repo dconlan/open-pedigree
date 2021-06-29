@@ -2,6 +2,7 @@ import { isInt } from 'pedigree/model/helpers';
 import BaseGraph from 'pedigree/model/baseGraph';
 import FHIRConverter from "pedigree/model/FHIRConverter";
 import RelationshipTracker from "pedigree/model/relationshipTracker";
+import GA4GHFHIRConverter from './GA4GHFHIRConverter';
 
 var PedigreeImport = function () {
 };
@@ -1038,7 +1039,9 @@ PedigreeImport.initFromFHIR = function(inputText){
   return FHIRConverter.initFromFHIR(inputText);
 };
 
-
+PedigreeImport.initFromGA4GH = function(inputText){
+  return GA4GHFHIRConverter.initFromFHIR(inputText);
+};
 
 
 
