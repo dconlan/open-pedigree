@@ -243,6 +243,39 @@ GA4GHFHIRConverter.initFromFHIR = function (inputText) {
     }
 
     newG.validate();
+
+    // set any
+    for (const nextPerson of nodeData){
+      if (nextPerson.cpartners){
+        let nextPersonId = undefined;
+        for (const partner of nextPerson.cpartners){
+          if (partner < nextPerson.nodeId){
+            continue; // should have already been processed.
+          }
+          if (nextPersonId === undefined){
+            nextPersonId = findReferencedPerson(nextPerson.properties.id, 'cpartner');
+          }
+          const partnerId = findReferencedPerson(nodeData[partner].properties.id, 'cpartner');
+          let relNode = newG.getRelationshipNode(nextPersonId, partnerId);
+          if (relNode){
+            let relProperties = newG.properties[relNode];
+            if (relProperties['consangr'] !== 'Y'){
+              relProperties['consangr'] = 'Y';
+              // check if we can make it 'A'
+              let nextGreatGrandParents = newG.getParentGenerations(nextPersonId, 3);
+              let partnerGreatGrandParents = newG.getParentGenerations(partnerId, 3);
+              for (let elem of nextGreatGrandParents) {
+                if (partnerGreatGrandParents.has(elem)) {
+                  // found common
+                  relProperties['consangr'] = 'A';
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
     // PedigreeImport.validateBaseGraph(newG);
 
     return newG;
