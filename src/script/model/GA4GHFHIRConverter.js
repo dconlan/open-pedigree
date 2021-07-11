@@ -1603,7 +1603,7 @@ GA4GHFHIRConverter.processTreeNode = function (index, pedigree, privacySetting, 
   let partners = pedigree.GG.getAllPartners(index);
   for (let i = 0; i < partners.length; i++) {
     if (!pedigreeIndividuals[partners[i]]) {
-      relationshipsToBuild[partners[i]] = 'SIGOTHR'
+      relationshipsToBuild[partners[i]] = 'SIGOTHR';
       let relNode = pedigree.GG.getRelationshipNode(index, partners[i]);
 
       if (relNode != null) {
