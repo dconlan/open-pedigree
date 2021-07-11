@@ -895,7 +895,7 @@ BaseGraph.prototype = {
     for (var r = 0; r < relationships.length; ++r) {
       var edgeTo       = relationships[r];
       var relationship = this.downTheChainUntilNonVirtual(edgeTo);
-      var partners = this.getParents(relationships);
+      var partners = this.getParents(relationship);
       if (partners[0] == v2 || partners[1] == v2) {
         return relationship;
       }
