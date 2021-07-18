@@ -32,6 +32,7 @@ var ExportSelector = Class.create( {
     typeListElement.insert(_addTypeOption(true,  'PED', 'ped'));
     typeListElement.insert(_addTypeOption(false,  'FHIR', 'fhir'));
     typeListElement.insert(_addTypeOption(false,  'GA4GH FHIR', 'GA4GH'));
+    typeListElement.insert(_addTypeOption(false,  'SVG', 'SVG'));
 
     var fileDownload = new Element('a', {'id': 'downloadLink', 'style': 'display:none'});
     mainDiv.insert(fileDownload);
@@ -123,6 +124,11 @@ var ExportSelector = Class.create( {
       var exportString = PedigreeExport.exportAsGA4GH(editor.getGraph().DG);
       var fileName = 'open-pedigree-GA4GH-fhir.json';
       var mimeType = 'application/fhir+json';
+    }
+    else if (exportType == 'SVG') {
+      var exportString = PedigreeExport.exportAsSVG(editor.getGraph().DG);
+      var fileName = 'open-pedigree.svg';
+      var mimeType = 'image/svg+xml';
     }
 
     saveTextAs(exportString, fileName);

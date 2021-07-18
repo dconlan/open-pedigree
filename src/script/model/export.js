@@ -104,6 +104,25 @@ PedigreeExport.exportAsGA4GH = function(pedigree, privacySetting = "all", fhirPa
   return GA4GHFHIRConverter.exportAsFHIR(pedigree, privacySetting, fhirPatientReference, pedigreeImage);
 };
 
+PedigreeExport.exportAsSVG = function(pedigree, privacySetting = "all"){
+  var image = $('canvas');
+  var background = image.getElementsByClassName('panning-background')[0];
+  var backgroundPosition = background.nextSibling;
+  var backgroundParent =  background.parentNode;
+  backgroundParent.removeChild(background);
+  var bbox = image.down().getBBox();
+  var pedigreeImage = image.innerHTML
+    .replace(/xmlns:xlink=".*?"/, '')
+    .replace(/width=".*?"/, '')
+    .replace(/height=".*?"/, '')
+    .replace(/viewBox=".*?"/, 'viewBox="' + bbox.x + ' ' + bbox.y + ' ' + bbox.width + ' ' + bbox.height + '" width="' + bbox.width + '" height="' + bbox.height + '" xmlns:xlink="http://www.w3.org/1999/xlink"');
+  var context = window.location.href.replace(/&/g,'&amp;');
+  pedigreeImage = pedigreeImage.split(context).join('');
+  backgroundParent.insertBefore(background, backgroundPosition);
+  return pedigreeImage;
+};
+
+
 // ===============================================================================================
 
 // TODO: convert internal properties to match public names and rename this to "supportedProperties"
