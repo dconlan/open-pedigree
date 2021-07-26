@@ -1,5 +1,6 @@
 import TemplateSelector from 'pedigree/view/templateSelector';
 import PedigreeExport from 'pedigree/model/export';
+import QuestionnaireConverter from './model/QuestionnaireConverter';
 
 /**
  * SaveLoadEngine is responsible for automatic and manual save and load operations.
@@ -140,6 +141,42 @@ var SaveLoadEngine = Class.create( {
     return true;
   },
 
+  createGraphFromBaseGraph: function(baseGraph, noUndo, centerAround0) {
+    document.fire('pedigree:load:start');
+
+    try {
+      var changeSet = editor.getGraph().fromBaseGraph(baseGraph);
+      if (changeSet == null) {
+        throw 'unable to create a pedigree from base graph';
+      }
+    } catch(err) {
+      console.log('Error importing pedigree:');
+      console.log(err);
+      alert('Error importing pedigree: ' + err);
+      document.fire('pedigree:load:finish');
+      return false;
+    }
+
+    if (!noUndo) {
+      var JSONString = editor.getGraph().toJSON();
+    }
+
+    if (editor.getView().applyChanges(changeSet, false)) {
+      editor.getWorkspace().adjustSizeToScreen();
+    }
+
+    if (centerAround0) {
+      editor.getWorkspace().centerAroundNode(0);
+    }
+
+    if (!noUndo) {
+      editor.getActionStack().addState(null, null, JSONString);
+    }
+
+    document.fire('pedigree:load:finish');
+    return true;
+  },
+
   save: function(patientDataUrl) {
     if (this._saveInProgress) {
       return;
@@ -226,13 +263,20 @@ var SaveLoadEngine = Class.create( {
     var didLoadData = false;
     if (patientDataUrl) {
       var uri = new URI(patientDataUrl);
-      if (uri.protocol() == 'local' ){
+      if (uri.protocol() === 'local' ){
         var localStorageKey = uri.path();
         uri.normalizeQuery();
         var options = uri.search();
         var format = getParameterByName(options, 'format') || 'internal';
+        var qDataKey = getParameterByName(options, 'qData');
+        var qData = undefined;
 
-        console.log("initiating load process from local storage : " + localStorageKey + " as " + format);
+        if (qDataKey){
+          console.log('found qData key : ' + qDataKey );
+          qData = JSON.parse(localStorage.getItem(qDataKey));
+        }
+
+        console.log('initiating load process from local storage : ' + localStorageKey + ' as ' + format);
 
         var data = JSON.parse(localStorage.getItem(localStorageKey));
         var clear = true;
@@ -246,7 +290,7 @@ var SaveLoadEngine = Class.create( {
             }
 
             var jsonData  = data.value;
-            if (jsonData){
+            if (jsonData && jsonData.length > 0){
             	createCalled = true;
             	if (format === "fhir"){
             		if (this.createGraphFromImportData(jsonData, format, {}, false /* add to undo stack */, true /*center around 0*/)){
@@ -261,6 +305,20 @@ var SaveLoadEngine = Class.create( {
         			clear = false;
             	}
             }
+            else if (qData && qData.length > 0) {
+              createCalled = true;
+              var newBaseGraph = QuestionnaireConverter.initFromQuestionnaire(qData);
+              if (this.createGraphFromBaseGraph(newBaseGraph, false /* add to undo stack */, true /*center around 0*/)){
+                clear = false;
+              }
+            }
+        }
+        else if (qData && qData.length > 0) {
+          createCalled = true;
+          var newBaseGraph = QuestionnaireConverter.initFromQuestionnaire(qData);
+          if (this.createGraphFromBaseGraph(newBaseGraph, false /* add to undo stack */, true /*center around 0*/)){
+            clear = false;
+          }
         }
         if (createCalled){
             if (clear){
