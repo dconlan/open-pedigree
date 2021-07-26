@@ -64,9 +64,12 @@
         OpenPedigree.setFHIRTerminology('gene', ontologyServer, 'http://www.genenames.org',
                 'http://www.genenames.org', /^HGNC:/, 20);
       }
+
+      var qData = getParameterByName('qData');
+
       console.log("creating editor");
 
-      var editorOptions = {patientDataUrl: 'local:pedigreeData?format=fhir&closeOnSave=true',
+      var editorOptions = {patientDataUrl: 'local:pedigreeData?format=fhir&closeOnSave=true' + (qData?('&qData='+qData):''),
                            returnUrl: '#CloseWindow'};
 
 

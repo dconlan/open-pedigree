@@ -1286,6 +1286,17 @@ DynamicPositionedGraph.prototype = {
     return {'new': newNodes, 'removed': removedNodes};
   },
 
+  fromBaseGraph: function (baseGraph) {
+    var removedNodes = this._getAllNodes();
+
+    if (!this._recreateUsingBaseGraph(baseGraph)) {
+      return null;
+    }  // no changes
+    var newNodes = this._getAllNodes();
+
+    return {'new': newNodes, 'removed': removedNodes};
+  },
+
   getPathToParents: function(v) {
     // returns an array with two elements: path to parent1 (excluding v) and path to parent2 (excluding v):
     // [ [virtual_node_11, ..., virtual_node_1n, parent1], [virtual_node_21, ..., virtual_node_2n, parent21] ]
@@ -1307,6 +1318,7 @@ DynamicPositionedGraph.prototype = {
         false,
         suggestedRanks );
     } catch (e) {
+      console.log(e);
       return false;
     }
 
