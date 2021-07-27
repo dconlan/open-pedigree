@@ -70,19 +70,53 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
     nodeByTag[qNode.tag] = person;
   }
   // try to add parent links
+  let partners = [];
+  let maxChildId = 0;
   for (const person of nodeData){
     QuestionnaireConverter.addParents(person, nodeByTag);
+    if (person.qNode.tag.startsWith('partner_')){
+      partners.push(person);
+    }
+    if (person.qNode.tag.startsWith('child_')){
+      let childId = parseInt(person.qNode.tag.substring(6));
+      if (childId > maxChildId){
+        maxChildId = childId;
+      }
+    }
   }
+
+  for (let p of partners){
+    if (p.children.size === 0){
+      // we need to make a fake child
+      maxChildId++;
+      let childTag = 'child_' + maxChildId.toString();
+      let fakeChild = {
+        properties: {id: childTag, gender: 'U'},
+        qNode: { tag: childTag, parent_tag: p.qNode.tag},
+        parents: [nodeByTag.proband, p],
+        children: new Set(),
+        partners: new Set()
+      };
+      p.children.add(fakeChild);
+      nodeByTag.proband.children.add(fakeChild);
+      nodeByTag.proband.partners.add(p);
+      p.partners.add(nodeByTag.proband);
+      nodeData.push(fakeChild);
+      nodeByTag[childTag] = fakeChild;
+    }
+  }
+
+
   QuestionnaireConverter.populateDistanceFromProband(nodeByTag.proband, 0);
 
   let fakeNodes = {};
   let badNodes = [];
   for (const person of nodeData){
-    if (!('dfp' in nodeData)){
+    if (!('dfp' in person)){
       // we found a node that is not connected to anything
       let cluster = new Set();
       QuestionnaireConverter.buildConnectedCluster(person, cluster);
-      let connectionNode = QuestionnaireConverter.findBestConnectInCluster(cluster);
+      let connectionNode = cluster.size == 1 ? person: QuestionnaireConverter.findBestConnectInCluster(cluster);
       QuestionnaireConverter.addMissingNodes(person, nodeByTag, fakeNodes, badNodes);
       for (let node of cluster){
         // give a dfp so we don't reprocess the node
@@ -157,9 +191,9 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
     }
   }
   // try to add parent links
-  // for (const person of nodeData){
-  //   QuestionnaireConverter.addParents(person, nodeByTag);
-  // }
+  for (const person of nodeData){
+    QuestionnaireConverter.addParents(person, nodeByTag);
+  }
 
 
   let defaultEdgeWeight = 1;
@@ -238,7 +272,7 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
     // if there is a relationship between motherID and fatherID the corresponding childhub is returned
     // if there is no relationship, a new one is created together with the chldhub
     let chhubID = relationshipTracker.createOrGetChildhub(motherID, fatherID);
-
+    console.log("Add edge for edge, child, mother, father", chhubID, personID, motherID, fatherID);
     newG.addEdge(chhubID, personID, defaultEdgeWeight);
   }
 
@@ -747,7 +781,8 @@ QuestionnaireConverter.addParents = function(person, nodeByTag){
       if ('father' in nodeByTag){
         person.father = nodeByTag.father;
       }
-    } else if (person.qNode.sibling_type !== 'other'){
+    // } else if (person.qNode.sibling_type !== 'other'){
+    } else {
       // default to full
       if ('mother' in nodeByTag){
         person.mother = nodeByTag.mother;
@@ -773,7 +808,8 @@ QuestionnaireConverter.addParents = function(person, nodeByTag){
       if ('m_father' in nodeByTag){
         person.father = nodeByTag.m_father;
       }
-    } else if (person.qNode.sibling_type !== 'other'){
+    // } else if (person.qNode.sibling_type !== 'other'){
+    } else {
       // default to full
       if ('m_mother' in nodeByTag){
         person.mother = nodeByTag.m_mother;
@@ -798,7 +834,8 @@ QuestionnaireConverter.addParents = function(person, nodeByTag){
       if ('f_father' in nodeByTag){
         person.father = nodeByTag.f_father;
       }
-    } else if (person.qNode.sibling_type !== 'other'){
+    // } else if (person.qNode.sibling_type !== 'other'){
+    } else {
       // default to full
       if ('f_mother' in nodeByTag){
         person.mother = nodeByTag.f_mother;
@@ -1414,7 +1451,7 @@ QuestionnaireConverter.connectFakeNode = function(person, nodeByTag){
       if (nodeTag === 'proband'){
         node.mother = person;
       } else if (nodeTag.startsWith('sibling_')){
-        if (node.qNode.sibling_type === 'full' || node.qNode.sibling_type === 'mat'){
+        if (node.qNode.sibling_type !== 'pat'){
           node.mother = person;
         }
       } else if (nodeTag === 'm_mother'){
@@ -1430,7 +1467,7 @@ QuestionnaireConverter.connectFakeNode = function(person, nodeByTag){
       if (nodeTag === 'proband'){
         node.father = person;
       } else if (nodeTag.startsWith('sibling_')){
-        if (node.qNode.sibling_type === 'full' || node.qNode.sibling_type === 'fat'){
+        if (node.qNode.sibling_type !== 'mat'){
           node.father = person;
         }
       } else if (nodeTag === 'f_mother'){
@@ -1446,7 +1483,7 @@ QuestionnaireConverter.connectFakeNode = function(person, nodeByTag){
       if (nodeTag === 'mother'){
         node.mother = person;
       } else if (nodeTag.startsWith('m_sibling_')){
-        if (node.qNode.sibling_type === 'full' || node.qNode.sibling_type === 'mat'){
+        if (node.qNode.sibling_type !== 'pat'){
           node.mother = person;
         }
       } else if (nodeTag.startsWith('m_extended_')){
@@ -1468,7 +1505,7 @@ QuestionnaireConverter.connectFakeNode = function(person, nodeByTag){
       if (nodeTag === 'father'){
         node.mother = person;
       } else if (nodeTag.startsWith('f_sibling_')){
-        if (node.qNode.sibling_type === 'full' || node.qNode.sibling_type === 'mat'){
+        if (node.qNode.sibling_type !== 'pat'){
           node.mother = person;
         }
       } else if (nodeTag.startsWith('f_extended_')){
@@ -1490,7 +1527,7 @@ QuestionnaireConverter.connectFakeNode = function(person, nodeByTag){
       if (nodeTag === 'mother'){
         node.father = person;
       } else if (nodeTag.startsWith('m_sibling_')){
-        if (node.qNode.sibling_type === 'full' || node.qNode.sibling_type === 'fat'){
+        if (node.qNode.sibling_type !== 'pat'){
           node.father = person;
         }
       } else if (nodeTag.startsWith('m_extended_')){
@@ -1512,7 +1549,7 @@ QuestionnaireConverter.connectFakeNode = function(person, nodeByTag){
       if (nodeTag === 'father'){
         node.father = person;
       } else if (nodeTag.startsWith('f_sibling_')){
-        if (node.qNode.sibling_type === 'full' || node.qNode.sibling_type === 'fat'){
+        if (node.qNode.sibling_type !== 'pat'){
           node.father = person;
         }
       } else if (nodeTag.startsWith('f_extended_')){
