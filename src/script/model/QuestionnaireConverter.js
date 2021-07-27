@@ -54,7 +54,6 @@ var QuestionnaireConverter = function () {
 
 QuestionnaireConverter.prototype = {};
 
-
 QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
   let nodeData = [];
 
@@ -72,35 +71,26 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
   }
   // try to add parent links
   for (const person of nodeData){
-    QuestionnaireConverter.addParentsAndPartners(person, nodeByTag);
+    QuestionnaireConverter.addParents(person, nodeByTag);
   }
-  // mark connected nodes
-  for (const person of nodeData){
-    if (person.connected){
-      continue;
-    }
-    if (person.mother){
-      person.connected = true;
-      person.mother.connected = true;
-    }
-    if (person.father){
-      person.connected = true;
-      person.father.connected = true;
-    }
-    if (person.parents){
-      for (let p of person.parents){
-        person.connected = true;
-        p.connected = true;
-      }
-    }
-  }
+  QuestionnaireConverter.populateDistanceFromProband(nodeByTag.proband, 0);
+
   let fakeNodes = {};
   let badNodes = [];
   for (const person of nodeData){
-    if (!person.connected){
+    if (!('dfp' in nodeData)){
+      // we found a node that is not connected to anything
+      let cluster = new Set();
+      QuestionnaireConverter.buildConnectedCluster(person, cluster);
+      let connectionNode = QuestionnaireConverter.findBestConnectInCluster(cluster);
       QuestionnaireConverter.addMissingNodes(person, nodeByTag, fakeNodes, badNodes);
+      for (let node of cluster){
+        // give a dfp so we don't reprocess the node
+        node.dfp = 1000;
+      }
     }
   }
+
   for (let fakeNodeTag in fakeNodes){
     if (fakeNodeTag in nodeByTag){
       // we already have this node.. something is not connected correctly
@@ -110,9 +100,9 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
       nodeData.push(fakeNodes[fakeNodeTag]);
     }
   }
-  // for (let fakeNodeTag in fakeNodes){
-  //   QuestionnaireConverter.connectFakeNode(fakeNodes[fakeNodeTag], nodeByTag);
-  // }
+  for (let fakeNodeTag in fakeNodes){
+    QuestionnaireConverter.connectFakeNode(fakeNodes[fakeNodeTag], nodeByTag);
+  }
 
 
   for (const person of nodeData){
@@ -167,9 +157,9 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
     }
   }
   // try to add parent links
-  for (const person of nodeData){
-    QuestionnaireConverter.addParentsAndPartners(person, nodeByTag);
-  }
+  // for (const person of nodeData){
+  //   QuestionnaireConverter.addParents(person, nodeByTag);
+  // }
 
 
   let defaultEdgeWeight = 1;
@@ -261,7 +251,9 @@ QuestionnaireConverter.extractDataFromQuestionnaireNode = function (qNode) {
   let properties = {id: qNode.tag};
   let result = {
     properties: properties,
-    qNode: qNode
+    qNode: qNode,
+    partners: new Set(),
+    children: new Set()
   };
   // John Smith
   // 11.13.67 (or age)
@@ -395,6 +387,141 @@ QuestionnaireConverter.extractDataFromQuestionnaireNode = function (qNode) {
   return result;
 };
 
+QuestionnaireConverter.populateDistanceFromProband = function(node, distance){
+  if (!node){
+    return;
+  }
+  if ('dfp' in node && node.dfp <= distance){
+    // already here
+    return;
+  }
+  node.dfp = distance;
+  const nextStep = distance + 1;
+  if (node.mother){
+    QuestionnaireConverter.populateDistanceFromProband(node.mother, nextStep);
+  }
+  if (node.father){
+    QuestionnaireConverter.populateDistanceFromProband(node.mother, nextStep);
+  }
+  if (node.parents){
+    for (let parentNode of node.parents){
+      QuestionnaireConverter.populateDistanceFromProband(parentNode, nextStep);
+    }
+  }
+  for (let childrenNode of node.children){
+    QuestionnaireConverter.populateDistanceFromProband(childrenNode, nextStep);
+  }
+  for (let partnerNode of node.partners){
+    QuestionnaireConverter.populateDistanceFromProband(partnerNode, nextStep);
+  }
+};
+
+QuestionnaireConverter.buildConnectedCluster = function(node, nodesInCluster){
+  if (nodesInCluster.has(node)){
+    // already visited
+    return;
+  }
+  nodesInCluster.add(node);
+  if (node.mother){
+    QuestionnaireConverter.buildConnectedCluster(node.mother, nodesInCluster);
+  }
+  if (node.father){
+    QuestionnaireConverter.buildConnectedCluster(node.mother, nodesInCluster);
+  }
+  if (node.parents){
+    for (let parentNode of node.parents){
+      QuestionnaireConverter.buildConnectedCluster(parentNode, nodesInCluster);
+    }
+  }
+  for (let childrenNode of node.children){
+    QuestionnaireConverter.buildConnectedCluster(childrenNode, nodesInCluster);
+  }
+  for (let partnerNode of node.partners){
+    QuestionnaireConverter.buildConnectedCluster(partnerNode, nodesInCluster);
+  }
+
+};
+
+QuestionnaireConverter.findBestConnectInCluster = function(cluster){
+
+  let clusterByTag = {};
+  for (let node of cluster){
+    let tag = node.qNode.tag;
+    if (tag.startsWith('sibling_')){
+      tag = 'sibling_';
+    } else if (tag.startsWith('m_sibling_')){
+      tag = 'm_sibling_';
+    } else if (tag.startsWith('f_sibling_')){
+      tag = 'f_sibling_';
+    } else if (tag.startsWith('m_extended_')){
+      tag = 'm_extended_';
+    } else if (tag.startsWith('f_extended_')){
+      tag = 'f_extended_';
+    }
+    if (tag in clusterByTag){
+      clusterByTag[tag].push(node);
+    } else {
+      clusterByTag[tag] = [node];
+    }
+  }
+
+  let stepsToProband = {
+    'grandson': 2,
+    'granddaughter': 2,
+    'grandchild': 2,
+    'great-grandson': 3,
+    'great-granddaughter': 3,
+    'great-grandchild': 3,
+    'niece': 3,
+    'nephew': 3,
+    'grandniece': 4,
+    'grandnephew': 4,
+    'cousin': 4,
+    'great-grandmother': 3,
+    'great-grandfather': 3,
+    'granduncle': 4,
+    'grandaunt': 4,
+  };
+
+  let extended = undefined;
+
+  if ('sibling_' in clusterByTag){
+    return clusterByTag.sibling_[0];
+  } else if ('m_mother' in clusterByTag){
+    return clusterByTag.m_mother[0];
+  } else if ('m_father' in clusterByTag){
+    return clusterByTag.m_father[0];
+  } else if ('f_mother' in clusterByTag){
+    return clusterByTag.f_mother[0];
+  } else if ('f_father' in clusterByTag){
+    return clusterByTag.f_father[0];
+  } else if ('m_sibling_' in clusterByTag){
+    return clusterByTag.m_sibling_[0];
+  } else if ('f_sibling_' in clusterByTag){
+    return clusterByTag.f_sibling_[0];
+  } else if ('m_extended_' in clusterByTag){
+    extended = clusterByTag.m_extended_;
+  } else if ('f_extended_' in clusterByTag) {
+    extended = clusterByTag.f_extended_;
+  } else {
+    extended = [...cluster];
+    console.log(extended);
+  }
+  if (extended.length == 1){
+    // only one node anyway
+    return extended[0];
+  }
+
+  extended.sort(function(a, b) {
+    let aSteps = (a.qNode.relationship in stepsToProband) ? stepsToProband[a.qNode.relationship] : 5;
+    let bSteps = (b.qNode.relationship in stepsToProband) ? stepsToProband[b.qNode.relationship] : 5;
+    return bSteps - aSteps;
+  });
+  return extended[0];
+};
+
+
+
 function testNodeName(person, splitName, tag, node, masks, results, extendedRels){
   for (let mask of masks){
     if (tag.startsWith(mask)){
@@ -404,17 +531,19 @@ function testNodeName(person, splitName, tag, node, masks, results, extendedRels
         results.push({ node: node, weighting: 20});
       } else {
         let weight = 0;
-        if (splitName.first[0] && splitName.first[0] === node.splitName.first[0]){
-          weight += 2; // 2 for matching first name
-        }
-        if (splitName.surname && splitName.surname === node.splitName.surname){
-          weight += 1; // 2 for matching first name
+        if (node.splitName){
+          if (splitName.first && node.splitName.first && splitName.first[0] === node.splitName.first[0]){
+            weight += 2; // 2 for matching first name
+          }
+          if (splitName.surname && splitName.surname === node.splitName.surname){
+            weight += 1; // 2 for matching first name
+          }
+          if (node.splitName.nickname && person.qNode.parent && person.qNode.parent === node.splitName.nickname){
+            weight += 2; // 2 for matching first name
+          }
         }
         if (splitName.surname && node.properties.lNameAtB && splitName.surname === node.properties.lNameAtB){
           weight += 1; // 2 for matching first name
-        }
-        if (node.splitName.nickname && person.qNode.parent && person.qNode.parent === node.splitName.nickname){
-          weight += 2; // 2 for matching first name
         }
         if (extendedRels && (tag.startsWith('m_extended') || tag.startsWith('f_extended')) &&  extendedRels.includes(node.qNode.relationship)){
           // correct relationship
@@ -492,49 +621,29 @@ function findExtendedByRelationship(nodeByTag, extendedType, rels){
 }
 
 function processGrandParent(gran, pa, greatGrandparent, parentAttrib){
-  let ggHasChildren = false;
-  if ('children' in greatGrandparent){
-    ggHasChildren = true;
-    if (greatGrandparent.children.includes(gran) || greatGrandparent.children.includes(pa)){
-      return;
-    }
+  if (greatGrandparent.children.has(gran) || greatGrandparent.children.has(pa)){
+    return;
   }
   // try to find best match out of two grandparents
   // first check if the parent name on the extended record matches.
   if ('parent' in greatGrandparent.qNode){
     if (greatGrandparent.qNode.parent && greatGrandparent.qNode.parent === gran.qNode.name){
       gran[parentAttrib] = greatGrandparent;
-      if (ggHasChildren){
-        greatGrandparent.children.push(gran);
-      } else {
-        greatGrandparent.children = [gran];
-      }
+      greatGrandparent.children.add(gran);
       return;
     }else if (greatGrandparent.qNode.parent && greatGrandparent.qNode.parent === pa.qNode.name){
       pa[parentAttrib] = greatGrandparent;
-      if (ggHasChildren){
-        greatGrandparent.children.push(pa);
-      } else {
-        greatGrandparent.children = [pa];
-      }
+      greatGrandparent.children.add(pa);
       return;
     }else if (greatGrandparent.qNode.parent && gran.splitName.first && gran.splitName.first.length > 0
-      && greatGrandparent.qNode.parent === gran.splitName.first[0]){
+              && greatGrandparent.qNode.parent === gran.splitName.first[0]){
       gran[parentAttrib] = greatGrandparent;
-      if (ggHasChildren){
-        greatGrandparent.children.push(gran);
-      } else {
-        greatGrandparent.children = [gran];
-      }
+      greatGrandparent.children.add(gran);
       return;
     }else if (greatGrandparent.qNode.parent && pa.splitName.first && pa.splitName.first.length > 0
-      && greatGrandparent.qNode.parent === pa.splitName.first[0]){
+              && greatGrandparent.qNode.parent === pa.splitName.first[0]){
       pa[parentAttrib] = greatGrandparent;
-      if (ggHasChildren){
-        greatGrandparent.children.push(pa);
-      } else {
-        greatGrandparent.children = [pa];
-      }
+      greatGrandparent.children.add(pa);
       return;
     }
   }
@@ -542,25 +651,13 @@ function processGrandParent(gran, pa, greatGrandparent, parentAttrib){
   if (ggNameSplit.surname && ggNameSplit.surname === gran.qNode.maiden_name){
     // matches maiden name
     gran[parentAttrib] = greatGrandparent;
-    if (ggHasChildren){
-      greatGrandparent.children.push(gran);
-    } else {
-      greatGrandparent.children = [gran];
-    }
+    greatGrandparent.children.add(gran);
   } else if (ggNameSplit.surname && ggNameSplit.surname === pa.splitName.surname){
     pa[parentAttrib] = greatGrandparent;
-    if (ggHasChildren){
-      greatGrandparent.children.push(pa);
-    } else {
-      greatGrandparent.children = [pa];
-    }
+    greatGrandparent.children.add(pa);
   } else if (ggNameSplit.surname && ggNameSplit.surname === gran.splitName.surname){
     gran[parentAttrib] = greatGrandparent;
-    if (ggHasChildren){
-      greatGrandparent.children.push(gran);
-    } else {
-      greatGrandparent.children = [gran];
-    }
+    greatGrandparent.children.add(gran);
   }
 }
 
@@ -579,7 +676,7 @@ function findGreatGrandparents(person, nodeByTag, extendedType, gran, pa){
 
 }
 
-QuestionnaireConverter.addParentsAndPartners = function(person, nodeByTag){
+QuestionnaireConverter.addParents = function(person, nodeByTag){
   const tag = person.qNode.tag;
   if ('proband' === tag){
     if ('mother' in nodeByTag){
@@ -925,7 +1022,27 @@ QuestionnaireConverter.addParentsAndPartners = function(person, nodeByTag){
     }
     findExtendedParent(person, nodeByTag, genderOverride, parentMasks, grandparentMasks, parentRels, grandparentRels);
   }
-
+  // add children and partners
+  if (person.mother) {
+    person.mother.children.add(person);
+  }
+  if (person.father) {
+    person.father.children.add(person);
+  }
+  if (person.mother && person.father) {
+    person.mother.partners.add(person.father);
+    person.father.partners.add(person.mother);
+  }
+  if (person.parents) {
+    if (person.parents.length === 1) {
+      person.parents[0].children.add(person);
+    } else if (person.parents.length === 2) {
+      person.parents[0].children.add(person);
+      person.parents[1].children.add(person);
+      person.parents[0].partners.add(person.parents[1]);
+      person.parents[1].partners.add(person.parents[0]);
+    }
+  }
 
 };
 
@@ -973,25 +1090,25 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
     // means we are missing mother
     if (!('mother' in fakeNodes)){
       console.log('adding fake mother due to m_mother not connected');
-      fakeNodes.mother = { qNode: { tag: 'mother'}, properties: {id: 'mother', gender: 'F'}};
+      fakeNodes.mother = { qNode: { tag: 'mother'}, properties: {id: 'mother', gender: 'F'}, children: new Set(), partners: new Set()};
     }
   } else if ('m_father' === tag){
     // means we are missing mother
     if (!('mother' in fakeNodes)){
       console.log('adding fake mother due to m_father not connected');
-      fakeNodes.mother = { qNode: { tag: 'mother'}, properties: {id: 'mother', gender: 'F'}};
+      fakeNodes.mother = { qNode: { tag: 'mother'}, properties: {id: 'mother', gender: 'F'}, children: new Set(), partners: new Set()};
     }
   } else if ('f_mother' === tag){
     // means we are missing father
     if (!('father' in fakeNodes)){
       console.log('adding fake father due to f_mother not connected');
-      fakeNodes.father = { qNode: { tag: 'father'}, properties: {id: 'father', gender: 'M'}};
+      fakeNodes.father = { qNode: { tag: 'father'}, properties: {id: 'father', gender: 'M'}, children: new Set(), partners: new Set()};
     }
   } else if ('f_father' === tag){
     // means we are missing father
     if (!('father' in fakeNodes)){
       console.log('adding fake father due to f_father not connected');
-      fakeNodes.father = { qNode: { tag: 'father'}, properties: {id: 'father', gender: 'M'}};
+      fakeNodes.father = { qNode: { tag: 'father'}, properties: {id: 'father', gender: 'M'}, children: new Set(), partners: new Set()};
     }
   } else if (tag.startsWith('child_')){
     // should not be possible
@@ -1001,31 +1118,31 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
     // means we are missing mother and father
     if (!('mother' in fakeNodes)){
       console.log('adding fake mother due to sibling not connected');
-      fakeNodes.mother = { qNode: { tag: 'mother'}, properties: {id: 'mother', gender: 'F'}};
+      fakeNodes.mother = { qNode: { tag: 'mother'}, properties: {id: 'mother', gender: 'F'}, children: new Set(), partners: new Set()};
     }
     if (!('father' in fakeNodes)){
       console.log('adding fake father due to sibling not connected');
-      fakeNodes.father = { qNode: { tag: 'father'}, properties: {id: 'father', gender: 'M'}};
+      fakeNodes.father = { qNode: { tag: 'father'}, properties: {id: 'father', gender: 'M'}, children: new Set(), partners: new Set()};
     }
   } else if (tag.startsWith('m_sibling_')){
     // means we are missing m_mother and m_father
     if (!('m_mother' in fakeNodes)){
       console.log('adding fake m_mother due to m_sibling not connected');
-      fakeNodes.m_mother = { qNode: { tag: 'm_mother'}, properties: {id: 'm_mother', gender: 'F'}};
+      fakeNodes.m_mother = { qNode: { tag: 'm_mother'}, properties: {id: 'm_mother', gender: 'F'}, children: new Set(), partners: new Set()};
     }
     if (!('m_father' in fakeNodes)){
       console.log('adding fake m_father due to m_sibling not connected');
-      fakeNodes.m_father = { qNode: { tag: 'm_father'}, properties: {id: 'm_father', gender: 'M'}};
+      fakeNodes.m_father = { qNode: { tag: 'm_father'}, properties: {id: 'm_father', gender: 'M'}, children: new Set(), partners: new Set()};
     }
   } else if (tag.startsWith('f_sibling_')){
     // means we are missing f_mother and f_father
     if (!('f_mother' in fakeNodes)){
       console.log('adding fake f_mother due to f_sibling not connected');
-      fakeNodes.f_mother = { qNode: { tag: 'f_mother'}, properties: {id: 'f_mother', gender: 'F'}};
+      fakeNodes.f_mother = { qNode: { tag: 'f_mother'}, properties: {id: 'f_mother', gender: 'F'}, children: new Set(), partners: new Set()};
     }
     if (!('f_father' in fakeNodes)){
       console.log('adding fake f_father due to f_sibling not connected');
-      fakeNodes.f_father = { qNode: { tag: 'f_father'}, properties: {id: 'm_father', gender: 'M'}};
+      fakeNodes.f_father = { qNode: { tag: 'f_father'}, properties: {id: 'm_father', gender: 'M'}, children: new Set(), partners: new Set()};
     }
   } else if (tag.startsWith('m_extended_')){
     let fakeTag = undefined;
@@ -1036,7 +1153,7 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
       case 'grandchild':
         // means we are missing child
         console.log('adding fake child_1 due to m_extended grandchild not connected');
-        fakeNodes.child_1 = { qNode: { tag: 'child_1'}, properties: {id: 'child_1', gender: 'U'}};
+        fakeNodes.child_1 = { qNode: { tag: 'child_1'}, properties: {id: 'child_1', gender: 'U'}, children: new Set(), partners: new Set()};
         break;
       case 'great-grandson':
       case 'great-granddaughter':
@@ -1044,7 +1161,7 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
         // means we are missing grandchild
         console.log('adding fake m_extended grandchild due to m_extended great-grandchild not connected');
         fakeTag = getNextId('m_extended_', nodeByTag, fakeNodes);
-        fakeNodes[fakeTag] = { qNode: { tag: fakeTag, relationship: 'grandchild'}, properties: {id: fakeTag, gender: 'U'}};
+        fakeNodes[fakeTag] = { qNode: { tag: fakeTag, relationship: 'grandchild'}, properties: {id: fakeTag, gender: 'U'}, children: new Set(), partners: new Set()};
         // deal with missing child
         QuestionnaireConverter.addMissingNodes(fakeNodes[fakeTag], nodeByTag, fakeNodes);
         break;
@@ -1052,7 +1169,7 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
       case 'nephew':
         // means we are missing sibling
         console.log('adding fake sibling_1 due to m_extended niece/nephew not connected');
-        fakeNodes.sibling_1 = { qNode: { tag: 'sibling_1'}, properties: {id: 'sibling_1', gender: 'U'}};
+        fakeNodes.sibling_1 = { qNode: { tag: 'sibling_1'}, properties: {id: 'sibling_1', gender: 'U'}, children: new Set(), partners: new Set()};
         if (!('mother' in nodeByTag || 'father' in nodeByTag || 'mother' in fakeNodes || 'father' in fakeNodes )) {
           QuestionnaireConverter.addMissingNodes(fakeNodes.sibling_1, nodeByTag, fakeNodes);
         }
@@ -1062,14 +1179,14 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
         // means we are missing niece or nephew
         console.log('adding fake m_extended niece due to m_extended grandniece/grandnephew not connected');
         fakeTag = getNextId('m_extended_', nodeByTag, fakeNodes);
-        fakeNodes[fakeTag] = { qNode: { tag: fakeTag, relationship: 'niece'}, properties: {id: fakeTag, gender: 'U'}};
+        fakeNodes[fakeTag] = { qNode: { tag: fakeTag, relationship: 'niece'}, properties: {id: fakeTag, gender: 'U'}, children: new Set(), partners: new Set()};
         // deal with missing sibling
         QuestionnaireConverter.addMissingNodes(fakeNodes[fakeTag], nodeByTag, fakeNodes);
         break;
       case 'cousin':
         // means we are missing m_sibling
         console.log('adding fake m_sibling_1 due to m_extended cousin not connected');
-        fakeNodes.m_sibling_1 = { qNode: { tag: 'm_sibling_1'}, properties: {id: 'm_sibling_1', gender: 'U'}};
+        fakeNodes.m_sibling_1 = { qNode: { tag: 'm_sibling_1'}, properties: {id: 'm_sibling_1', gender: 'U'}, children: new Set(), partners: new Set()};
         if (!(hasExtended(nodeByTag, fakeNodes, 'm_extended_', ['great-grandmother', 'great-grandfather']))) {
           QuestionnaireConverter.addMissingNodes(fakeNodes.sibling_1, nodeByTag, fakeNodes);
         }
@@ -1079,7 +1196,7 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
         // means we are missing grandparent
         if (!('m_mother' in fakeNodes)){
           console.log('adding fake m_mother due to m_extended great-grandparent not connected');
-          fakeNodes.m_mother = { qNode: { tag: 'm_mother'}, properties: {id: 'm_mother', gender: 'F'}};
+          fakeNodes.m_mother = { qNode: { tag: 'm_mother'}, properties: {id: 'm_mother', gender: 'F'}, children: new Set(), partners: new Set()};
           if (!('mother' in nodeByTag || 'mother' in fakeNodes )) {
             QuestionnaireConverter.addMissingNodes(fakeNodes.m_mother, nodeByTag, fakeNodes);
           }
@@ -1097,7 +1214,7 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
         // means we are missing great grandparent
         console.log('adding fake m_extended great-grandmother due to m_extended granduncle/grandaunt not connected');
         fakeTag = getNextId('m_extended_', nodeByTag, fakeNodes);
-        fakeNodes.fakeTag = { qNode: { tag: fakeTag, relationship: 'great-grandmother'}, properties: {id: fakeTag, gender: 'U'}, children: [person]};
+        fakeNodes.fakeTag = { qNode: { tag: fakeTag, relationship: 'great-grandmother'}, properties: {id: fakeTag, gender: 'U'}, children: new Set(), partners: new Set()};
         if (!('m_mother' in nodeByTag || 'm_father' in nodeByTag || 'm_mother' in fakeNodes || 'm_father' in fakeNodes)) {
           QuestionnaireConverter.addMissingNodes(fakeNodes.sibling_1, nodeByTag, fakeNodes);
         }
@@ -1116,7 +1233,7 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
       case 'grandchild':
         // means we are missing child
         console.log('adding fake child_1 due to f_extended grandchild not connected');
-        fakeNodes.child_1 = {qNode: {tag: 'child_1'}, properties: {id: 'child_1', gender: 'U'}};
+        fakeNodes.child_1 = {qNode: {tag: 'child_1'}, properties: {id: 'child_1', gender: 'U'}, children: new Set(), partners: new Set()};
         break;
       case 'great-grandson':
       case 'great-granddaughter':
@@ -1124,7 +1241,7 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
         // means we are missing grandchild
         console.log('adding fake f_extended grandchild due to f_extended great-grandchild not connected');
         fakeTag = getNextId('f_extended_', nodeByTag, fakeNodes);
-        fakeNodes[fakeTag] = {qNode: {tag: fakeTag, relationship: 'grandchild'}, properties: {id: fakeTag, gender: 'U'}};
+        fakeNodes[fakeTag] = {qNode: {tag: fakeTag, relationship: 'grandchild'}, properties: {id: fakeTag, gender: 'U'}, children: new Set(), partners: new Set()};
         // deal with missing child
         QuestionnaireConverter.addMissingNodes(fakeNodes[fakeTag], nodeByTag, fakeNodes);
         break;
@@ -1132,7 +1249,7 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
       case 'nephew':
         // means we are missing sibling
         console.log('adding fake sibling_1 due to f_extended niece/nephew not connected');
-        fakeNodes.sibling_1 = {qNode: {tag: 'sibling_1'}, properties: {id: 'sibling_1', gender: 'U'}};
+        fakeNodes.sibling_1 = {qNode: {tag: 'sibling_1'}, properties: {id: 'sibling_1', gender: 'U'}, children: new Set(), partners: new Set()};
         if (!('mother' in nodeByTag || 'father' in nodeByTag || 'mother' in fakeNodes || 'father' in fakeNodes )) {
           QuestionnaireConverter.addMissingNodes(fakeNodes.sibling_1, nodeByTag, fakeNodes);
         }
@@ -1142,14 +1259,14 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
         // means we are missing niece or nephew
         console.log('adding fake f_extended niece due to f_extended grandniece/grandnephew not connected');
         fakeTag = getNextId('f_extended_', nodeByTag, fakeNodes);
-        fakeNodes[fakeTag] = {qNode: {tag: fakeTag, relationship: 'niece'}, properties: {id: fakeTag, gender: 'U'}};
+        fakeNodes[fakeTag] = {qNode: {tag: fakeTag, relationship: 'niece'}, properties: {id: fakeTag, gender: 'U'}, children: new Set(), partners: new Set()};
         // deal with missing sibling
         QuestionnaireConverter.addMissingNodes(fakeNodes[fakeTag], nodeByTag, fakeNodes);
         break;
       case 'cousin':
         // means we are missing m_sibling
         console.log('adding fake f_sibling_1 niece due to f_extended cousin not connected');
-        fakeNodes.f_sibling_1 = {qNode: {tag: 'f_sibling_1'}, properties: {id: 'f_sibling_1', gender: 'U'}};
+        fakeNodes.f_sibling_1 = {qNode: {tag: 'f_sibling_1'}, properties: {id: 'f_sibling_1', gender: 'U'}, children: new Set(), partners: new Set()};
         if (!(hasExtended(nodeByTag, fakeNodes, 'f_extended_', ['great-grandmother', 'great-grandfather']))) {
           QuestionnaireConverter.addMissingNodes(fakeNodes.sibling_1, nodeByTag, fakeNodes);
         }
@@ -1159,14 +1276,14 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
         // means we are missing grandparent
         if (!('f_mother' in fakeNodes)) {
           console.log('adding fake f_mother due to f_extended great-grandparent not connected');
-          fakeNodes.f_mother = {qNode: {tag: 'f_mother'}, properties: {id: 'f_mother', gender: 'F'}};
+          fakeNodes.f_mother = {qNode: {tag: 'f_mother'}, properties: {id: 'f_mother', gender: 'F'}, children: new Set(), partners: new Set()};
           if (!('father' in nodeByTag || 'father' in fakeNodes )) {
             QuestionnaireConverter.addMissingNodes(fakeNodes.m_mother, nodeByTag, fakeNodes);
           }
         }
         if (!('f_father' in fakeNodes)) {
           console.log('adding fake f_father due to f_extended great-grandparent not connected');
-          fakeNodes.f_father = {qNode: {tag: 'f_father'}, properties: {id: 'f_father', gender: 'M'}};
+          fakeNodes.f_father = {qNode: {tag: 'f_father'}, properties: {id: 'f_father', gender: 'M'}, children: new Set(), partners: new Set()};
           if (!('father' in nodeByTag || 'father' in fakeNodes )) {
             QuestionnaireConverter.addMissingNodes(fakeNodes.m_mother, nodeByTag, fakeNodes);
           }
@@ -1177,7 +1294,7 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
         // means we are missing great grandparent
         console.log('adding fake f_extended great-grandmother due to f_extended granduncle/grandaunt not connected');
         fakeTag = getNextId('f_extended_', nodeByTag, fakeNodes);
-        fakeNodes.fakeTag = {qNode: {tag: fakeTag, relationship: 'great-grandmother'}, properties: {id: fakeTag, gender: 'U'}, children: [person]};
+        fakeNodes.fakeTag = {qNode: {tag: fakeTag, relationship: 'great-grandmother'}, properties: {id: fakeTag, gender: 'U'}, children: new Set([person]), partners: new Set()};
         if (!('m_mother' in nodeByTag || 'm_father' in nodeByTag || 'm_mother' in fakeNodes || 'm_father' in fakeNodes)) {
           QuestionnaireConverter.addMissingNodes(fakeNodes.sibling_1, nodeByTag, fakeNodes);
         }
