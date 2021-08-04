@@ -1,6 +1,7 @@
 import TemplateSelector from 'pedigree/view/templateSelector';
 import PedigreeExport from 'pedigree/model/export';
 import QuestionnaireConverter from './model/QuestionnaireConverter';
+// import URI from 'vendor/URI.js';
 
 /**
  * SaveLoadEngine is responsible for automatic and manual save and load operations.
@@ -41,8 +42,7 @@ function getSubSelectorTextFromXML(responseXML, selectorName, attributeName, att
 
   var value = selector.innerText || selector.text || selector.textContent;
 
-  if (!value)     // fix IE behavior where (undefined || "" || undefined) == undefined
-  {
+  if (!value) {    // fix IE behavior where (undefined || "" || undefined) == undefined
     value = '';
   }
 
@@ -50,13 +50,17 @@ function getSubSelectorTextFromXML(responseXML, selectorName, attributeName, att
 }
 
 function getParameterByName(url, name) {
-  name = name.replace(/[\[\]]/g, '\\$&');
+  name = name.replace(/[[\]]/g, '\\$&');
   var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
-      results = regex.exec(url);
-  if (!results) return null;
-  if (!results[2]) return '';
+    results = regex.exec(url);
+  if (!results) {
+    return null;
+  }
+  if (!results[2]) {
+    return '';
+  }
   return decodeURIComponent(results[2].replace(/\+/g, ' '));
-};
+}
 
 var SaveLoadEngine = Class.create( {
 
@@ -88,9 +92,11 @@ var SaveLoadEngine = Class.create( {
       return false;
     }
 
-    if (editor.getView().applyChanges(changeSet, false)) {
-      editor.getWorkspace().adjustSizeToScreen();
-    }
+    // if (editor.getView().applyChanges(changeSet, false)) {
+    //   editor.getWorkspace().adjustSizeToScreen();
+    // }
+    editor.getView().applyChanges(changeSet, false);
+    editor.getWorkspace().adjustSizeToScreen();
 
     if (centerAround0) {
       editor.getWorkspace().centerAroundNode(0);
@@ -178,6 +184,7 @@ var SaveLoadEngine = Class.create( {
   },
 
   save: function(patientDataUrl) {
+    let jsonData;
     if (this._saveInProgress) {
       return;
     }   // Don't send parallel save requests
@@ -187,32 +194,41 @@ var SaveLoadEngine = Class.create( {
 
     if (patientDataUrl) {
       document.fire('pedigree:save:start');
-      var image = $('canvas');
-      var background = image.getElementsByClassName('panning-background')[0];
-      var backgroundPosition = background.nextSibling;
-      var backgroundParent =  background.parentNode;
+      const image = $('canvas');
+      const background = image.getElementsByClassName('panning-background')[0];
+      const backgroundPosition = background.nextSibling;
+      const backgroundParent = background.parentNode;
       backgroundParent.removeChild(background);
-      var bbox = image.down().getBBox();
-      var pedigreeImage = image.innerHTML.replace(/xmlns:xlink=".*?"/, '')
-          .replace(/width=".*?"/, '')
-          .replace(/height=".*?"/, '')
-          .replace(/viewBox=".*?"/, 'viewBox="' + bbox.x + ' ' + bbox.y + ' ' + bbox.width + ' ' + bbox.height + '" width="' + bbox.width + '" height="' + bbox.height + '" xmlns:xlink="http://www.w3.org/1999/xlink"');
-      var context = window.location.href.replace(/&/g,'&amp;');
+      const bbox = image.down().getBBox();
+      let pedigreeImage = image.innerHTML.replace(/xmlns:xlink=".*?"/, '')
+        .replace(/width=".*?"/, '')
+        .replace(/height=".*?"/, '')
+        .replace(/viewBox=".*?"/, 'viewBox="' + bbox.x + ' ' + bbox.y + ' ' + bbox.width + ' ' + bbox.height + '" width="' + bbox.width + '" height="' + bbox.height + '" xmlns:xlink="http://www.w3.org/1999/xlink"');
+      const context = window.location.href.replace(/&/g, '&amp;');
       pedigreeImage = pedigreeImage.split(context).join('');
 
-      var uri = new URI(patientDataUrl);
-      if (uri.protocol() == 'local' ) {
-        var localStorageKey = uri.path();
+      const uri = new URI(patientDataUrl);
+      if (uri.protocol() === 'local' ) {
+        const localStorageKey = uri.path();
         uri.normalizeQuery();
-        var options = uri.search();
-        var format = getParameterByName(options, 'format') || 'internal';
-        var closeOnSave = getParameterByName(options, 'closeOnSave')
-        ;
-        var jsonData = null;
-        if (format === "fhir"){
+        const options = uri.search();
+        const format = getParameterByName(options, 'format') || 'internal';
+        const closeOnSave = getParameterByName(options, 'closeOnSave');
+        const qDataKey = getParameterByName(options, 'qData');
+
+        if (qDataKey){
+          console.log('found qData key : ' + qDataKey );
+          let oldQData = JSON.parse(localStorage.getItem(qDataKey));
+          let qData = QuestionnaireConverter.createQuestionnaireDataFromGraph(editor.getGraph().DG, oldQData);
+          localStorage.setItem(qDataKey, JSON.stringify(qData, null, 2));
+          console.log('Set qData into local stoarge', qData);
+        }
+
+        jsonData = null;
+        if (format === 'fhir'){
           // var patientFhirRef = (this._context) ? this._context.patientFhirRef : null;
           var patientFhirRef = null;
-          jsonData = PedigreeExport.exportAsFHIR(editor.getGraph().DG, "all", patientFhirRef, pedigreeImage);
+          jsonData = PedigreeExport.exportAsFHIR(editor.getGraph().DG, 'all', patientFhirRef, pedigreeImage);
         }
         // else if (this._saveAs === "simpleJSON"){
         //   jsonData = PedigreeExport.exportAsSimpleJSON(editor.getGraph().DG, "all");;
@@ -220,22 +236,21 @@ var SaveLoadEngine = Class.create( {
         else {
           jsonData = this.serialize();
         }
-        var data = {};
+        const data = {};
         data.value = jsonData;
         if (this._context){
           data.context = this._context;
         }
         localStorage.setItem(localStorageKey, JSON.stringify(data, null, 2));
 
-        console.log("[SAVE] to local storage : " + localStorageKey + " as " + format);
+        console.log('[SAVE] to local storage : ' + localStorageKey + ' as ' + format);
         document.fire('pedigree:save:complete');
         if (closeOnSave === 'true' || closeOnSave === ''){
-          console.log("Attempt to close the window");
+          console.log('Attempt to close the window');
           window.close();
         }
-      }
-      else {
-        var jsonData = this.serialize();
+      } else {
+        jsonData = this.serialize();
 
         console.log('[SAVE] data: ' + JSON.stringify(jsonData,null, 2));
 
@@ -282,38 +297,34 @@ var SaveLoadEngine = Class.create( {
         var clear = true;
         var createCalled = false;
         if (data){
-            if(data.context){
-                this._context = data.context;
-            }
-            else {
-            	this._context = undefined;
-            }
+          if(data.context){
+            this._context = data.context;
+          } else {
+            this._context = undefined;
+          }
 
-            var jsonData  = data.value;
-            if (jsonData && jsonData.length > 0){
-            	createCalled = true;
-            	if (format === "fhir"){
-            		if (this.createGraphFromImportData(jsonData, format, {}, false /* add to undo stack */, true /*center around 0*/)){
-            			// loaded
-            			clear = false;
-            		}
-            	}
-            	else {
-                	jsonData = editor.getVersionUpdater().updateToCurrentVersion(jsonData);
-                    this.createGraphFromSerializedData(jsonData);
-                    // the createGraphFromSerializedData method will clear if it errors
-        			clear = false;
-            	}
-            }
-            else if (qData && qData.length > 0) {
-              createCalled = true;
-              var newBaseGraph = QuestionnaireConverter.initFromQuestionnaire(qData);
-              if (this.createGraphFromBaseGraph(newBaseGraph, false /* add to undo stack */, true /*center around 0*/)){
+          var jsonData  = data.value;
+          if (jsonData && jsonData.length > 0){
+            createCalled = true;
+            if (format === 'fhir') {
+              if (this.createGraphFromImportData(jsonData, format, {}, false /* add to undo stack */, true /*center around 0*/)) {
+                // loaded
                 clear = false;
               }
+            } else {
+              jsonData = editor.getVersionUpdater().updateToCurrentVersion(jsonData);
+              this.createGraphFromSerializedData(jsonData);
+              // the createGraphFromSerializedData method will clear if it errors
+              clear = false;
             }
-        }
-        else if (qData && qData.length > 0) {
+          } else if (qData && qData.length > 0) {
+            createCalled = true;
+            var newBaseGraph = QuestionnaireConverter.initFromQuestionnaire(qData);
+            if (this.createGraphFromBaseGraph(newBaseGraph, false /* add to undo stack */, true /*center around 0*/)){
+              clear = false;
+            }
+          }
+        } else if (qData && qData.length > 0) {
           createCalled = true;
           var newBaseGraph = QuestionnaireConverter.initFromQuestionnaire(qData);
           if (this.createGraphFromBaseGraph(newBaseGraph, false /* add to undo stack */, true /*center around 0*/)){
@@ -321,18 +332,16 @@ var SaveLoadEngine = Class.create( {
           }
         }
         if (createCalled){
-            if (clear){
-            	// empty
-                new TemplateSelector(true);
-            }
-        }
-        else {
-        	console.log("No data to load");
-        	console.log("Clearing graph");
+          if (clear){
+            // empty
             new TemplateSelector(true);
+          }
+        } else {
+          console.log('No data to load');
+          console.log('Clearing graph');
+          new TemplateSelector(true);
         }
-      }
-      else {
+      } else {
         new Ajax.Request(patientDataUrl, {
           method: 'GET',
           onCreate: function() {
