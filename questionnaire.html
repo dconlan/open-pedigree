@@ -125,7 +125,7 @@
 
   function buildPersonData(tag, attributes) {
 
-    const arrayAttributes = ['problem'];
+    const arrayAttributes = ['problem', 'problem_age'];
     const booleanAttributes = ['deceased'];
 
     let personData = { tag: tag };
@@ -160,19 +160,59 @@
         }
       }
       else {
-        const attributeName = attributeDef.attribute;
-        for (let i = 1; i <= attributeDef.count; i++){
-          const elementId = '#' + tag + '_' + attributeDef.mask.replace('%', i.toString());
-          const attributeValue = getAttributeValue(elementId);
-          if ($.type(attributeValue) !== "undefined") {
-            if (attributeName in personData) {
-              personData[attributeName].push(attributeValue);
-            }
-            else if (booleanAttributes.includes(attributeName)){
+        if ('attribute' in attributeDef){
+          const attributeName = attributeDef.attribute;
+          for (let i = 1; i <= attributeDef.count; i++){
+            const elementId = '#' + tag + '_' + attributeDef.mask.replace('%', i.toString());
+            const attributeValue = getAttributeValue(elementId);
+            if ($.type(attributeValue) !== "undefined") {
+              if (attributeName in personData) {
+                personData[attributeName].push(attributeValue);
+              }
+              else if (booleanAttributes.includes(attributeName)){
                 personData[attributeName] = true;
+              }
+              else {
+                personData[attributeName] = [attributeValue];
+              }
             }
-            else {
-              personData[attributeName] = [attributeValue];
+          }
+        }
+        else if ('attributes' in attributeDef){
+          for (let i = 1; i <= attributeDef.count; i++){
+
+            for (let attributeNo = 0; attributeNo < attributeDef.attributes.length; attributeNo++){
+              let attributeName = attributeDef.attributes[attributeNo];
+              const elementId = '#' + tag + '_' + attributeDef.masks[attributeNo].replace('%', i.toString());
+              let attributeValue = getAttributeValue(elementId);
+              if ($.type(attributeValue) !== "undefined") {
+                if (attributeName in personData) {
+                  personData[attributeName].push(attributeValue);
+                }
+                else if (booleanAttributes.includes(attributeName)){
+                  personData[attributeName] = true;
+                }
+                else {
+                  personData[attributeName] = [attributeValue];
+                }
+              } else {
+                if (attributeNo === 0){
+                  // empty first
+                  break;
+                }
+                else {
+                  attributeValue = '';
+                  if (attributeName in personData) {
+                    personData[attributeName].push(attributeValue);
+                  }
+                  else if (booleanAttributes.includes(attributeName)){
+                    personData[attributeName] = false;
+                  }
+                  else {
+                    personData[attributeName] = [attributeValue];
+                  }
+                }
+              }
             }
           }
         }
@@ -197,43 +237,50 @@
       {
         tag: 'child_%',
         count: 20,
-        attributes: ['name', 'sex', 'dob', 'parent_tag', 'has_problem', 'problem', 'problem_age',
+        attributes: ['name', 'sex', 'dob', 'parent_tag', 'has_problem',
+          {masks: ['problem_%', 'problem_age_%'], count: 6, attributes: ['problem', 'problem_age']},
           'deceased', 'dod', 'cause_death']
       },
       {
         tag: 'sibling_%',
         count: 20,
-        attributes: ['name', 'sex', 'dob', 'sibling_type', 'has_problem', 'problem', 'problem_age',
+        attributes: ['name', 'sex', 'dob', 'sibling_type', 'has_problem',
+          {masks: ['problem_%', 'problem_age_%'], count: 6, attributes: ['problem', 'problem_age']},
           'deceased', 'dod', 'cause_death']
       },
       {
         tag: 'mother',
         count: 0,
-        attributes: ['name', 'dob', 'maiden_name', 'has_problem', 'problem', 'problem_age',
+        attributes: ['name', 'dob', 'maiden_name', 'has_problem',
+          {masks: ['problem_%', 'problem_age_%'], count: 6, attributes: ['problem', 'problem_age']},
           'deceased', 'dod', 'cause_death']
       },
       {
         tag: 'father',
         count: 0,
-        attributes: ['name', 'dob', 'has_problem', 'problem', 'problem_age',
+        attributes: ['name', 'dob', 'has_problem',
+          {masks: ['problem_%', 'problem_age_%'], count: 6, attributes: ['problem', 'problem_age']},
           'deceased', 'dod', 'cause_death']
       },
       {
         tag: 'm_sibling_%',
         count: 20,
-        attributes: ['name', 'sex', 'dob', 'sibling_type', 'has_problem', 'problem', 'problem_age',
+        attributes: ['name', 'sex', 'dob', 'sibling_type', 'has_problem',
+          {masks: ['problem_%', 'problem_age_%'], count: 6, attributes: ['problem', 'problem_age']},
           'deceased', 'dod', 'cause_death']
       },
       {
         tag: 'm_mother',
         count: 0,
-        attributes: ['name', 'dob', 'maiden_name', 'has_problem', 'problem', 'problem_age',
+        attributes: ['name', 'dob', 'maiden_name', 'has_problem',
+            {masks: ['problem_%', 'problem_age_%'], count: 6, attributes: ['problem', 'problem_age']},
           'deceased', 'dod', 'cause_death']
       },
       {
         tag: 'm_father',
         count: 0,
-        attributes: ['name', 'dob', 'has_problem', 'problem', 'problem_age',
+        attributes: ['name', 'dob', 'has_problem',
+          {masks: ['problem_%', 'problem_age_%'], count: 6, attributes: ['problem', 'problem_age']},
           'deceased', 'dod', 'cause_death']
       },
       {
@@ -244,19 +291,22 @@
       {
         tag: 'f_sibling_%',
         count: 20,
-        attributes: ['name', 'sex', 'dob', 'sibling_type', 'has_problem', 'problem', 'problem_age',
+        attributes: ['name', 'sex', 'dob', 'sibling_type', 'has_problem',
+            {masks: ['problem_%', 'problem_age_%'], count: 6, attributes: ['problem', 'problem_age']},
           'deceased', 'dod', 'cause_death']
       },
       {
         tag: 'f_mother',
         count: 0,
-        attributes: ['name', 'dob', 'maiden_name', 'has_problem', 'problem', 'problem_age',
+        attributes: ['name', 'dob', 'maiden_name', 'has_problem',
+          {masks: ['problem_%', 'problem_age_%'], count: 6, attributes: ['problem', 'problem_age']},
           'deceased', 'dod', 'cause_death']
       },
       {
         tag: 'f_father',
         count: 0,
-        attributes: ['name', 'dob', 'has_problem', 'problem', 'problem_age',
+        attributes: ['name', 'dob', 'has_problem',
+          {masks: ['problem_%', 'problem_age_%'], count: 6, attributes: ['problem', 'problem_age']},
           'deceased', 'dod', 'cause_death']
       },
       {
@@ -288,8 +338,47 @@
     return data;
   }
 
-  function updateQuestionnaireData(data){
+  function forceUpdateQuestionnaireData(){
+    let qData = JSON.parse(localStorage.getItem(qDataStorageKey));
+    updateQuestionnaireData(qData);
+  }
 
+  function updateQuestionnaireData(data){
+    console.log('Nodes to process = ' + data.length);
+    let hasChildren = false;
+    let hasSiblings = false;
+    let hasMSiblings = false;
+    let hasFSiblings = false;
+    for (let node of data){
+      let tag = node.tag;
+      console.log('process node with tag ' + tag);
+      if (tag.startsWith('child') || tag.startsWith('partner')){
+        hasChildren = true;
+      } else if (tag.startsWith('sibling')){
+        hasSiblings = true;
+      } else if (tag.startsWith('m_sibling')){
+        hasMSiblings = true;
+      } else if (tag.startsWith('f_sibling')){
+        hasFSiblings = true;
+      }
+      for (let attr in node){
+        if (attr === 'tag'){
+          continue;
+        }
+        let elementName = tag + '_' + attr;
+        const element = $('#' + elementName);
+        if (attr === 'deceased'){
+          element.prop('checked', node[attr]).change();
+        }
+        else {
+          element.val(node[attr]).change();
+        }
+      }
+    }
+    $('#have_children_flag').prop('checked', hasChildren).change();
+    $('#have_siblings_flag').prop('checked', hasSiblings).change();
+    $('#have_m_siblings_flag').prop('checked', hasMSiblings).change();
+    $('#have_f_siblings_flag').prop('checked', hasFSiblings).change();
   }
 
   $(function() {
@@ -301,57 +390,98 @@
       {showElement: 'partner_%_cause_death', testElement: 'partner_%_deceased', count: 4, action: 'enableIfSelected'},
       {showElement: 'partner_%_dod', testElement: 'partner_%_deceased', count: 4, action: 'enableIfSelected'},
       {showElement: 'partner_%%_section', testElement: 'partner_%_name', count: 4, action: 'showIfNotEmpty'},
-      {showElement: 'child_%_problem', testElement: 'child_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
-      {showElement: 'child_%_problem_age', testElement: 'child_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'child_%_problem_1', testElement: 'child_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'child_%_problem_age_1', testElement: 'child_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
       {showElement: 'child_%_cause_death', testElement: 'child_%_deceased', count: 20, action: 'enableIfSelected'},
       {showElement: 'child_%_dod', testElement: 'child_%_deceased', count: 20, action: 'enableIfSelected'},
       {showElement: 'child_%%_section', testElement: 'child_%_name', count: 20, action: 'showIfNotEmpty'},
       {showElement: 'siblings_section', testElement: 'have_siblings_flag', count: 0, action: 'showIfSelected'},
-      {showElement: 'sibling_%_problem', testElement: 'sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
-      {showElement: 'sibling_%_problem_age', testElement: 'sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'sibling_%_problem_1', testElement: 'sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'sibling_%_problem_age_1', testElement: 'sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
       {showElement: 'sibling_%_cause_death', testElement: 'sibling_%_deceased', count: 20, action: 'enableIfSelected'},
       {showElement: 'sibling_%_dod', testElement: 'sibling_%_deceased', count: 20, action: 'enableIfSelected'},
       {showElement: 'sibling_%%_section', testElement: 'sibling_%_name', count: 20, action: 'showIfNotEmpty'},
-      {showElement: 'mother_problem', testElement: 'mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
-      {showElement: 'mother_problem_age', testElement: 'mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'mother_problem_1', testElement: 'mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'mother_problem_age_1', testElement: 'mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'mother_problem_row_%%', testElement: 'mother_problem_%', count: 6, action: 'showIfNotEmpty'},
+      {showElement: 'mother_problem_%%', testElement: 'mother_problem_%', count: 20, action: 'enableIfNotEmpty'},
+      {showElement: 'mother_problem_age_%%', testElement: 'mother_problem_%', count: 20, action: 'enableIfNotEmpty'},
       {showElement: 'mother_cause_death', testElement: 'mother_deceased', count: 0, action: 'enableIfSelected'},
       {showElement: 'mother_dod', testElement: 'mother_deceased', count: 0, action: 'enableIfSelected'},
-      {showElement: 'father_problem', testElement: 'father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
-      {showElement: 'father_problem_age', testElement: 'father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'father_problem_1', testElement: 'father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'father_problem_age_1', testElement: 'father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'father_problem_row_%%', testElement: 'father_problem_%', count: 6, action: 'showIfNotEmpty'},
+      {showElement: 'father_problem_%%', testElement: 'father_problem_%', count: 20, action: 'enableIfNotEmpty'},
+      {showElement: 'father_problem_age_%%', testElement: 'father_problem_%', count: 20, action: 'enableIfNotEmpty'},
       {showElement: 'father_cause_death', testElement: 'father_deceased', count: 0, action: 'enableIfSelected'},
       {showElement: 'father_dod', testElement: 'father_deceased', count: 0, action: 'enableIfSelected'},
       {showElement: 'm_siblings_section', testElement: 'have_m_siblings_flag', count: 0, action: 'showIfSelected'},
-      {showElement: 'm_sibling_%_problem', testElement: 'm_sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
-      {showElement: 'm_sibling_%_problem_age', testElement: 'm_sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'm_sibling_%_problem_1', testElement: 'm_sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'm_sibling_%_problem_age_1', testElement: 'm_sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
       {showElement: 'm_sibling_%_cause_death', testElement: 'm_sibling_%_deceased', count: 20, action: 'enableIfSelected'},
       {showElement: 'm_sibling_%_dod', testElement: 'm_sibling_%_deceased', count: 20, action: 'enableIfSelected'},
       {showElement: 'm_sibling_%%_section', testElement: 'm_sibling_%_name', count: 20, action: 'showIfNotEmpty'},
-      {showElement: 'm_mother_problem', testElement: 'm_mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
-      {showElement: 'm_mother_problem_age', testElement: 'm_mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'm_mother_problem_1', testElement: 'm_mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'm_mother_problem_age_1', testElement: 'm_mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'm_mother_problem_row_%%', testElement: 'm_mother_problem_%', count: 6, action: 'showIfNotEmpty'},
+      {showElement: 'm_mother_problem_%%', testElement: 'm_mother_problem_%', count: 20, action: 'enableIfNotEmpty'},
+      {showElement: 'm_mother_problem_age_%%', testElement: 'm_mother_problem_%', count: 20, action: 'enableIfNotEmpty'},
       {showElement: 'm_mother_cause_death', testElement: 'm_mother_deceased', count: 0, action: 'enableIfSelected'},
       {showElement: 'm_mother_dod', testElement: 'm_mother_deceased', count: 0, action: 'enableIfSelected'},
-      {showElement: 'm_father_problem', testElement: 'm_father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
-      {showElement: 'm_father_problem_age', testElement: 'm_father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'm_father_problem_1', testElement: 'm_father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'm_father_problem_age_1', testElement: 'm_father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'm_father_problem_row_%%', testElement: 'm_father_problem_%', count: 6, action: 'showIfNotEmpty'},
+      {showElement: 'm_father_problem_%%', testElement: 'm_father_problem_%', count: 20, action: 'enableIfNotEmpty'},
+      {showElement: 'm_father_problem_age_%%', testElement: 'm_father_problem_%', count: 20, action: 'enableIfNotEmpty'},
       {showElement: 'm_father_cause_death', testElement: 'm_father_deceased', count: 0, action: 'enableIfSelected'},
       {showElement: 'm_father_dod', testElement: 'm_father_deceased', count: 0, action: 'enableIfSelected'},
       {showElement: 'm_extended_%%_section', testElement: 'm_extended_%_name', count: 20, action: 'showIfNotEmpty'},
       {showElement: 'f_siblings_section', testElement: 'have_f_siblings_flag', count: 0, action: 'showIfSelected'},
-      {showElement: 'f_sibling_%_problem', testElement: 'f_sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
-      {showElement: 'f_sibling_%_problem_age', testElement: 'f_sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'f_sibling_%_problem_1', testElement: 'f_sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'f_sibling_%_problem_age_1', testElement: 'f_sibling_%_has_problem', count: 20, action: 'enableIfEquals', actionValue:['1','3']},
       {showElement: 'f_sibling_%_cause_death', testElement: 'f_sibling_%_deceased', count: 20, action: 'enableIfSelected'},
       {showElement: 'f_sibling_%_dod', testElement: 'f_sibling_%_deceased', count: 20, action: 'enableIfSelected'},
       {showElement: 'f_sibling_%%_section', testElement: 'f_sibling_%_name', count: 20, action: 'showIfNotEmpty'},
-      {showElement: 'f_mother_problem', testElement: 'f_mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
-      {showElement: 'f_mother_problem_age', testElement: 'f_mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'f_mother_problem_1', testElement: 'f_mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'f_mother_problem_age_1', testElement: 'f_mother_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'f_mother_problem_row_%%', testElement: 'f_mother_problem_%', count: 6, action: 'showIfNotEmpty'},
+      {showElement: 'f_mother_problem_%%', testElement: 'f_mother_problem_%', count: 20, action: 'enableIfNotEmpty'},
+      {showElement: 'f_mother_problem_age_%%', testElement: 'f_mother_problem_%', count: 20, action: 'enableIfNotEmpty'},
       {showElement: 'f_mother_cause_death', testElement: 'f_mother_deceased', count: 0, action: 'enableIfSelected'},
       {showElement: 'f_mother_dod', testElement: 'f_mother_deceased', count: 0, action: 'enableIfSelected'},
-      {showElement: 'f_father_problem', testElement: 'f_father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
-      {showElement: 'f_father_problem_age', testElement: 'f_father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'f_father_problem_1', testElement: 'f_father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'f_father_problem_age_1', testElement: 'f_father_has_problem', count: 0, action: 'enableIfEquals', actionValue:['1','3']},
+      {showElement: 'f_father_problem_row_%%', testElement: 'f_father_problem_%', count: 6, action: 'showIfNotEmpty'},
+      {showElement: 'f_father_problem_%%', testElement: 'f_father_problem_%', count: 20, action: 'enableIfNotEmpty'},
+      {showElement: 'f_father_problem_age_%%', testElement: 'f_father_problem_%', count: 20, action: 'enableIfNotEmpty'},
       {showElement: 'f_father_cause_death', testElement: 'f_father_deceased', count: 0, action: 'enableIfSelected'},
       {showElement: 'f_father_dod', testElement: 'f_father_deceased', count: 0, action: 'enableIfSelected'},
       {showElement: 'f_extended_%%_section', testElement: 'f_extended_%_name', count: 20, action: 'showIfNotEmpty'},
-
     ];
+
+    for (let i = 1; i <= 20; i++){
+      if ($('#child_' + i + '_has_problem').length){
+        elementIteractions.push({showElement: 'child_' + i + '_problem_row_%%', testElement: 'child_' + i + '_problem_%', count: 6, action: 'showIfNotEmpty'})
+        elementIteractions.push({showElement: 'child_' + i + '_problem_%%', testElement: 'child_' + i + '_problem_%', count: 20, action: 'enableIfNotEmpty'})
+        elementIteractions.push({showElement: 'child_' + i + '_problem_age_%%', testElement: 'child_' + i + '_problem_%', count: 20, action: 'enableIfNotEmpty'})
+      }
+      if ($('#sibling_' + i + '_has_problem').length){
+        elementIteractions.push({showElement: 'sibling_' + i + '_problem_row_%%', testElement: 'sibling_' + i + '_problem_%', count: 6, action: 'showIfNotEmpty'})
+        elementIteractions.push({showElement: 'sibling_' + i + '_problem_%%', testElement: 'sibling_' + i + '_problem_%', count: 20, action: 'enableIfNotEmpty'})
+        elementIteractions.push({showElement: 'sibling_' + i + '_problem_age_%%', testElement: 'sibling_' + i + '_problem_%', count: 20, action: 'enableIfNotEmpty'})
+      }
+      if ($('#m_sibling_' + i + '_has_problem').length){
+        elementIteractions.push({showElement: 'm_sibling_' + i + '_problem_row_%%', testElement: 'm_sibling_' + i + '_problem_%', count: 6, action: 'showIfNotEmpty'})
+        elementIteractions.push({showElement: 'm_sibling_' + i + '_problem_%%', testElement: 'm_sibling_' + i + '_problem_%', count: 20, action: 'enableIfNotEmpty'})
+        elementIteractions.push({showElement: 'm_sibling_' + i + '_problem_age_%%', testElement: 'm_sibling_' + i + '_problem_%', count: 20, action: 'enableIfNotEmpty'})
+      }
+      if ($('#f_sibling_' + i + '_has_problem').length){
+        elementIteractions.push({showElement: 'f_sibling_' + i + '_problem_row_%%', testElement: 'f_sibling_' + i + '_problem_%', count: 6, action: 'showIfNotEmpty'})
+        elementIteractions.push({showElement: 'f_sibling_' + i + '_problem_%%', testElement: 'f_sibling_' + i + '_problem_%', count: 20, action: 'enableIfNotEmpty'})
+        elementIteractions.push({showElement: 'f_sibling_' + i + '_problem_age_%%', testElement: 'f_sibling_' + i + '_problem_%', count: 20, action: 'enableIfNotEmpty'})
+      }
+    }
+
     var interactionsByTestElement = {};
     for (const ei of elementIteractions){
       if (ei.count){
@@ -400,6 +530,9 @@
             break;
           case 'enableIfEquals':
             interaction.element.prop('disabled', !interaction.actionValue.includes($(this).val()));
+            break;
+          case 'enableIfNotEmpty':
+            interaction.element.prop('disabled', $(this).val() === '');
             break;
           }
         }
@@ -759,10 +892,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="child_1_problem" name="child_1_problem">
+            <input type="text" class="form-control" id="child_1_problem_1" name="child_1_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="child_1_problem_age" name="child_1_problem_age">
+            <input type="text" class="form-control" id="child_1_problem_age_1" name="child_1_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="child_1_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_1_problem_2" name="child_1_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_1_problem_age_2" name="child_1_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="child_1_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_1_problem_3" name="child_1_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_1_problem_age_3" name="child_1_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="child_1_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_1_problem_4" name="child_1_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_1_problem_age_4" name="child_1_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="child_1_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_1_problem_5" name="child_1_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_1_problem_age_5" name="child_1_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="child_1_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_1_problem_6" name="child_1_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_1_problem_age_6" name="child_1_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -830,10 +1003,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="child_2_problem" name="child_2_problem">
+            <input type="text" class="form-control" id="child_2_problem_1" name="child_2_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="child_2_problem_age" name="child_2_problem_age">
+            <input type="text" class="form-control" id="child_2_problem_age_1" name="child_2_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="child_2_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_2_problem_2" name="child_2_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_2_problem_age_2" name="child_2_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="child_2_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_2_problem_3" name="child_2_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_2_problem_age_3" name="child_2_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="child_2_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_2_problem_4" name="child_2_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_2_problem_age_4" name="child_2_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="child_2_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_2_problem_5" name="child_2_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_2_problem_age_5" name="child_2_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="child_2_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_2_problem_6" name="child_2_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_2_problem_age_6" name="child_2_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -901,12 +1114,54 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="child_3_problem" name="child_3_problem">
+            <input type="text" class="form-control" id="child_3_problem_1" name="child_3_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="child_3_problem_age" name="child_3_problem_age">
+            <input type="text" class="form-control" id="child_3_problem_age_1" name="child_3_problem_age_1">
           </div>
         </div>
+        <div class="row" id="child_3_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_3_problem_2" name="child_3_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_3_problem_age_2" name="child_3_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="child_3_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_3_problem_3" name="child_3_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_3_problem_age_3" name="child_3_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="child_3_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_3_problem_4" name="child_3_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_3_problem_age_4" name="child_3_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="child_3_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_3_problem_5" name="child_3_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_3_problem_age_5" name="child_3_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="child_3_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_3_problem_6" name="child_3_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_3_problem_age_6" name="child_3_problem_age_6">
+          </div>
+        </div>
+
+
         <div class="row">
           <div class="col-2">Deceased</div>
           <div class="col-7">Cause of Death</div>
@@ -972,10 +1227,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="child_4_problem" name="child_4_problem">
+            <input type="text" class="form-control" id="child_4_problem_1" name="child_4_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="child_4_problem_age" name="child_4_problem_age">
+            <input type="text" class="form-control" id="child_4_problem_age_1" name="child_4_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="child_4_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_4_problem_2" name="child_4_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_4_problem_age_2" name="child_4_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="child_4_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_4_problem_3" name="child_4_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_4_problem_age_3" name="child_4_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="child_4_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_4_problem_4" name="child_4_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_4_problem_age_4" name="child_4_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="child_4_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_4_problem_5" name="child_4_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_4_problem_age_5" name="child_4_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="child_4_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_4_problem_6" name="child_4_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_4_problem_age_6" name="child_4_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -1043,10 +1338,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="child_5_problem" name="child_5_problem">
+            <input type="text" class="form-control" id="child_5_problem_1" name="child_5_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="child_5_problem_age" name="child_5_problem_age">
+            <input type="text" class="form-control" id="child_5_problem_age_1" name="child_5_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="child_5_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_5_problem_2" name="child_5_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_5_problem_age_2" name="child_5_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="child_5_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_5_problem_3" name="child_5_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_5_problem_age_3" name="child_5_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="child_5_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_5_problem_4" name="child_5_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_5_problem_age_4" name="child_5_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="child_5_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_5_problem_5" name="child_5_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_5_problem_age_5" name="child_5_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="child_5_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_5_problem_6" name="child_5_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_5_problem_age_6" name="child_5_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -1114,10 +1449,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="child_6_problem" name="child_6_problem">
+            <input type="text" class="form-control" id="child_6_problem_1" name="child_6_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="child_6_problem_age" name="child_6_problem_age">
+            <input type="text" class="form-control" id="child_6_problem_age_1" name="child_6_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="child_6_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_6_problem_2" name="child_6_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_6_problem_age_2" name="child_6_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="child_6_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_6_problem_3" name="child_6_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_6_problem_age_3" name="child_6_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="child_6_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_6_problem_4" name="child_6_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_6_problem_age_4" name="child_6_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="child_6_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_6_problem_5" name="child_6_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_6_problem_age_5" name="child_6_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="child_6_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="child_6_problem_6" name="child_6_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="child_6_problem_age_6" name="child_6_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -1186,10 +1561,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="child_7_problem" name="child_7_problem">
+          <input type="text" class="form-control" id="child_7_problem_1" name="child_7_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="child_7_problem_age" name="child_7_problem_age">
+          <input type="text" class="form-control" id="child_7_problem_age_1" name="child_7_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="child_7_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_7_problem_2" name="child_7_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_7_problem_age_2" name="child_7_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="child_7_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_7_problem_3" name="child_7_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_7_problem_age_3" name="child_7_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="child_7_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_7_problem_4" name="child_7_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_7_problem_age_4" name="child_7_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="child_7_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_7_problem_5" name="child_7_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_7_problem_age_5" name="child_7_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="child_7_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_7_problem_6" name="child_7_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_7_problem_age_6" name="child_7_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -1257,10 +1672,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="child_8_problem" name="child_8_problem">
+          <input type="text" class="form-control" id="child_8_problem_1" name="child_8_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="child_8_problem_age" name="child_8_problem_age">
+          <input type="text" class="form-control" id="child_8_problem_age_1" name="child_8_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="child_8_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_8_problem_2" name="child_8_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_8_problem_age_2" name="child_8_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="child_8_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_8_problem_3" name="child_8_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_8_problem_age_3" name="child_8_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="child_8_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_8_problem_4" name="child_8_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_8_problem_age_4" name="child_8_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="child_8_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_8_problem_5" name="child_8_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_8_problem_age_5" name="child_8_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="child_8_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_8_problem_6" name="child_8_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_8_problem_age_6" name="child_8_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -1328,10 +1783,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="child_9_problem" name="child_9_problem">
+          <input type="text" class="form-control" id="child_9_problem_1" name="child_9_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="child_9_problem_age" name="child_9_problem_age">
+          <input type="text" class="form-control" id="child_9_problem_age_1" name="child_9_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="child_9_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_9_problem_2" name="child_9_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_9_problem_age_2" name="child_9_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="child_9_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_9_problem_3" name="child_9_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_9_problem_age_3" name="child_9_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="child_9_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_9_problem_4" name="child_9_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_9_problem_age_4" name="child_9_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="child_9_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_9_problem_5" name="child_9_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_9_problem_age_5" name="child_9_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="child_9_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_9_problem_6" name="child_9_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_9_problem_age_6" name="child_9_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -1399,10 +1894,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="child_10_problem" name="child_10_problem">
+          <input type="text" class="form-control" id="child_10_problem_1" name="child_10_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="child_10_problem_age" name="child_10_problem_age">
+          <input type="text" class="form-control" id="child_10_problem_age_1" name="child_10_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="child_10_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_10_problem_2" name="child_10_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_10_problem_age_2" name="child_10_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="child_10_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_10_problem_3" name="child_10_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_10_problem_age_3" name="child_10_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="child_10_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_10_problem_4" name="child_10_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_10_problem_age_4" name="child_10_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="child_10_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_10_problem_5" name="child_10_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_10_problem_age_5" name="child_10_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="child_10_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_10_problem_6" name="child_10_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_10_problem_age_6" name="child_10_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -1470,10 +2005,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="child_11_problem" name="child_11_problem">
+          <input type="text" class="form-control" id="child_11_problem_1" name="child_11_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="child_11_problem_age" name="child_11_problem_age">
+          <input type="text" class="form-control" id="child_11_problem_age_1" name="child_11_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="child_11_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_11_problem_2" name="child_11_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_11_problem_age_2" name="child_11_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="child_11_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_11_problem_3" name="child_11_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_11_problem_age_3" name="child_11_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="child_11_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_11_problem_4" name="child_11_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_11_problem_age_4" name="child_11_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="child_11_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_11_problem_5" name="child_11_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_11_problem_age_5" name="child_11_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="child_11_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_11_problem_6" name="child_11_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_11_problem_age_6" name="child_11_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -1541,10 +2116,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="child_12_problem" name="child_12_problem">
+          <input type="text" class="form-control" id="child_12_problem_1" name="child_12_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="child_12_problem_age" name="child_12_problem_age">
+          <input type="text" class="form-control" id="child_12_problem_age_1" name="child_12_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="child_12_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_12_problem_2" name="child_12_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_12_problem_age_2" name="child_12_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="child_12_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_12_problem_3" name="child_12_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_12_problem_age_3" name="child_12_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="child_12_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_12_problem_4" name="child_12_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_12_problem_age_4" name="child_12_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="child_12_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_12_problem_5" name="child_12_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_12_problem_age_5" name="child_12_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="child_12_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_12_problem_6" name="child_12_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_12_problem_age_6" name="child_12_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -1612,10 +2227,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="child_13_problem" name="child_13_problem">
+          <input type="text" class="form-control" id="child_13_problem_1" name="child_13_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="child_13_problem_age" name="child_13_problem_age">
+          <input type="text" class="form-control" id="child_13_problem_age_1" name="child_13_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="child_13_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_13_problem_2" name="child_13_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_13_problem_age_2" name="child_13_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="child_13_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_13_problem_3" name="child_13_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_13_problem_age_3" name="child_13_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="child_13_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_13_problem_4" name="child_13_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_13_problem_age_4" name="child_13_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="child_13_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_13_problem_5" name="child_13_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_13_problem_age_5" name="child_13_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="child_13_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_13_problem_6" name="child_13_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_13_problem_age_6" name="child_13_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -1683,10 +2338,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="child_14_problem" name="child_14_problem">
+          <input type="text" class="form-control" id="child_14_problem_1" name="child_14_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="child_14_problem_age" name="child_14_problem_age">
+          <input type="text" class="form-control" id="child_14_problem_age_1" name="child_14_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="child_14_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_14_problem_2" name="child_14_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_14_problem_age_2" name="child_14_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="child_14_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_14_problem_3" name="child_14_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_14_problem_age_3" name="child_14_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="child_14_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_14_problem_4" name="child_14_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_14_problem_age_4" name="child_14_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="child_14_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_14_problem_5" name="child_14_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_14_problem_age_5" name="child_14_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="child_14_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_14_problem_6" name="child_14_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_14_problem_age_6" name="child_14_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -1754,10 +2449,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="child_15_problem" name="child_15_problem">
+          <input type="text" class="form-control" id="child_15_problem_1" name="child_15_problem"_1>
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="child_15_problem_age" name="child_15_problem_age">
+          <input type="text" class="form-control" id="child_15_problem_age_1" name="child_15_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="child_15_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_15_problem_2" name="child_15_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_15_problem_age_2" name="child_15_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="child_15_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_15_problem_3" name="child_15_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_15_problem_age_3" name="child_15_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="child_15_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_15_problem_4" name="child_15_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_15_problem_age_4" name="child_15_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="child_15_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_15_problem_5" name="child_15_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_15_problem_age_5" name="child_15_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="child_15_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="child_15_problem_6" name="child_15_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="child_15_problem_age_6" name="child_15_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -1841,10 +2576,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="sibling_1_problem" name="sibling_1_problem">
+            <input type="text" class="form-control" id="sibling_1_problem_1" name="sibling_1_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="sibling_1_problem_age" name="sibling_1_problem_age">
+            <input type="text" class="form-control" id="sibling_1_problem_age_1" name="sibling_1_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="sibling_1_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_1_problem_2" name="sibling_1_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_1_problem_age_2" name="sibling_1_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="sibling_1_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_1_problem_3" name="sibling_1_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_1_problem_age_3" name="sibling_1_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="sibling_1_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_1_problem_4" name="sibling_1_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_1_problem_age_4" name="sibling_1_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="sibling_1_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_1_problem_5" name="sibling_1_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_1_problem_age_5" name="sibling_1_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="sibling_1_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_1_problem_6" name="sibling_1_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_1_problem_age_6" name="sibling_1_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -1911,10 +2686,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="sibling_2_problem" name="sibling_2_problem">
+            <input type="text" class="form-control" id="sibling_2_problem_1" name="sibling_2_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="sibling_2_problem_age" name="sibling_2_problem_age">
+            <input type="text" class="form-control" id="sibling_2_problem_age_1" name="sibling_2_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="sibling_2_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_2_problem_2" name="sibling_2_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_2_problem_age_2" name="sibling_2_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="sibling_2_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_2_problem_3" name="sibling_2_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_2_problem_age_3" name="sibling_2_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="sibling_2_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_2_problem_4" name="sibling_2_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_2_problem_age_4" name="sibling_2_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="sibling_2_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_2_problem_5" name="sibling_2_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_2_problem_age_5" name="sibling_2_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="sibling_2_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_2_problem_6" name="sibling_2_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_2_problem_age_6" name="sibling_2_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -1981,10 +2796,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="sibling_3_problem" name="sibling_3_problem">
+            <input type="text" class="form-control" id="sibling_3_problem_1" name="sibling_3_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="sibling_3_problem_age" name="sibling_3_problem_age">
+            <input type="text" class="form-control" id="sibling_3_problem_age_1" name="sibling_3_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="sibling_3_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_3_problem_2" name="sibling_3_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_3_problem_age_2" name="sibling_3_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="sibling_3_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_3_problem_3" name="sibling_3_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_3_problem_age_3" name="sibling_3_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="sibling_3_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_3_problem_4" name="sibling_3_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_3_problem_age_4" name="sibling_3_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="sibling_3_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_3_problem_5" name="sibling_3_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_3_problem_age_5" name="sibling_3_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="sibling_3_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_3_problem_6" name="sibling_3_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_3_problem_age_6" name="sibling_3_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -2051,10 +2906,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="sibling_4_problem" name="sibling_4_problem">
+            <input type="text" class="form-control" id="sibling_4_problem_1" name="sibling_4_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="sibling_4_problem_age" name="sibling_4_problem_age">
+            <input type="text" class="form-control" id="sibling_4_problem_age_1" name="sibling_4_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="sibling_4_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_4_problem_2" name="sibling_4_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_4_problem_age_2" name="sibling_4_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="sibling_4_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_4_problem_3" name="sibling_4_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_4_problem_age_3" name="sibling_4_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="sibling_4_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_4_problem_4" name="sibling_4_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_4_problem_age_4" name="sibling_4_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="sibling_4_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_4_problem_5" name="sibling_4_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_4_problem_age_5" name="sibling_4_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="sibling_4_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_4_problem_6" name="sibling_4_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_4_problem_age_6" name="sibling_4_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -2121,10 +3016,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="sibling_5_problem" name="sibling_5_problem">
+            <input type="text" class="form-control" id="sibling_5_problem_1" name="sibling_5_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="sibling_5_problem_age" name="sibling_5_problem_age">
+            <input type="text" class="form-control" id="sibling_5_problem_age_1" name="sibling_5_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="sibling_5_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_5_problem_2" name="sibling_5_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_5_problem_age_2" name="sibling_5_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="sibling_5_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_5_problem_3" name="sibling_5_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_5_problem_age_3" name="sibling_5_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="sibling_5_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_5_problem_4" name="sibling_5_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_5_problem_age_4" name="sibling_5_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="sibling_5_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_5_problem_5" name="sibling_5_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_5_problem_age_5" name="sibling_5_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="sibling_5_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_5_problem_6" name="sibling_5_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_5_problem_age_6" name="sibling_5_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -2191,10 +3126,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="sibling_6_problem" name="sibling_6_problem">
+            <input type="text" class="form-control" id="sibling_6_problem_1" name="sibling_6_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="sibling_6_problem_age" name="sibling_6_problem_age">
+            <input type="text" class="form-control" id="sibling_6_problem_age_1" name="sibling_6_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="sibling_6_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_6_problem_2" name="sibling_6_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_6_problem_age_2" name="sibling_6_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="sibling_6_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_6_problem_3" name="sibling_6_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_6_problem_age_3" name="sibling_6_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="sibling_6_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_6_problem_4" name="sibling_6_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_6_problem_age_4" name="sibling_6_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="sibling_6_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_6_problem_5" name="sibling_6_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_6_problem_age_5" name="sibling_6_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="sibling_6_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="sibling_6_problem_6" name="sibling_6_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="sibling_6_problem_age_6" name="sibling_6_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -2262,10 +3237,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="sibling_7_problem" name="sibling_7_problem">
+          <input type="text" class="form-control" id="sibling_7_problem_1" name="sibling_7_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="sibling_7_problem_age" name="sibling_7_problem_age">
+          <input type="text" class="form-control" id="sibling_7_problem_age_1" name="sibling_7_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="sibling_7_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_7_problem_2" name="sibling_7_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_7_problem_age_2" name="sibling_7_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="sibling_7_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_7_problem_3" name="sibling_7_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_7_problem_age_3" name="sibling_7_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="sibling_7_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_7_problem_4" name="sibling_7_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_7_problem_age_4" name="sibling_7_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="sibling_7_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_7_problem_5" name="sibling_7_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_7_problem_age_5" name="sibling_7_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="sibling_7_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_7_problem_6" name="sibling_7_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_7_problem_age_6" name="sibling_7_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -2332,10 +3347,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="sibling_8_problem" name="sibling_8_problem">
+          <input type="text" class="form-control" id="sibling_8_problem_1" name="sibling_8_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="sibling_8_problem_age" name="sibling_8_problem_age">
+          <input type="text" class="form-control" id="sibling_8_problem_age_1" name="sibling_8_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="sibling_8_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_8_problem_2" name="sibling_8_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_8_problem_age_2" name="sibling_8_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="sibling_8_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_8_problem_3" name="sibling_8_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_8_problem_age_3" name="sibling_8_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="sibling_8_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_8_problem_4" name="sibling_8_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_8_problem_age_4" name="sibling_8_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="sibling_8_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_8_problem_5" name="sibling_8_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_8_problem_age_5" name="sibling_8_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="sibling_8_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_8_problem_6" name="sibling_8_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_8_problem_age_6" name="sibling_8_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -2402,10 +3457,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="sibling_9_problem" name="sibling_9_problem">
+          <input type="text" class="form-control" id="sibling_9_problem_1" name="sibling_9_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="sibling_9_problem_age" name="sibling_9_problem_age">
+          <input type="text" class="form-control" id="sibling_9_problem_age_1" name="sibling_9_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="sibling_9_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_9_problem_2" name="sibling_9_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_9_problem_age_2" name="sibling_9_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="sibling_9_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_9_problem_3" name="sibling_9_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_9_problem_age_3" name="sibling_9_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="sibling_9_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_9_problem_4" name="sibling_9_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_9_problem_age_4" name="sibling_9_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="sibling_9_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_9_problem_5" name="sibling_9_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_9_problem_age_5" name="sibling_9_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="sibling_9_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_9_problem_6" name="sibling_9_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_9_problem_age_6" name="sibling_9_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -2472,10 +3567,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="sibling_10_problem" name="sibling_10_problem">
+          <input type="text" class="form-control" id="sibling_10_problem_1" name="sibling_10_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="sibling_10_problem_age" name="sibling_10_problem_age">
+          <input type="text" class="form-control" id="sibling_10_problem_age_1" name="sibling_10_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="sibling_10_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_10_problem_2" name="sibling_10_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_10_problem_age_2" name="sibling_10_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="sibling_10_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_10_problem_3" name="sibling_10_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_10_problem_age_3" name="sibling_10_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="sibling_10_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_10_problem_4" name="sibling_10_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_10_problem_age_4" name="sibling_10_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="sibling_10_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_10_problem_5" name="sibling_10_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_10_problem_age_5" name="sibling_10_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="sibling_10_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_10_problem_6" name="sibling_10_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_10_problem_age_6" name="sibling_10_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -2542,10 +3677,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="sibling_11_problem" name="sibling_11_problem">
+          <input type="text" class="form-control" id="sibling_11_problem_1" name="sibling_11_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="sibling_11_problem_age" name="sibling_11_problem_age">
+          <input type="text" class="form-control" id="sibling_11_problem_age_1" name="sibling_11_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="sibling_11_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_11_problem_2" name="sibling_11_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_11_problem_age_2" name="sibling_11_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="sibling_11_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_11_problem_3" name="sibling_11_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_11_problem_age_3" name="sibling_11_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="sibling_11_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_11_problem_4" name="sibling_11_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_11_problem_age_4" name="sibling_11_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="sibling_11_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_11_problem_5" name="sibling_11_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_11_problem_age_5" name="sibling_11_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="sibling_11_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_11_problem_6" name="sibling_11_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_11_problem_age_6" name="sibling_11_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -2612,10 +3787,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="sibling_12_problem" name="sibling_12_problem">
+          <input type="text" class="form-control" id="sibling_12_problem_1" name="sibling_12_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="sibling_12_problem_age" name="sibling_12_problem_age">
+          <input type="text" class="form-control" id="sibling_12_problem_age_1" name="sibling_12_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="sibling_12_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_12_problem_2" name="sibling_12_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_12_problem_age_2" name="sibling_12_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="sibling_12_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_12_problem_3" name="sibling_12_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_12_problem_age_3" name="sibling_12_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="sibling_12_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_12_problem_4" name="sibling_12_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_12_problem_age_4" name="sibling_12_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="sibling_12_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_12_problem_5" name="sibling_12_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_12_problem_age_5" name="sibling_12_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="sibling_12_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_12_problem_6" name="sibling_12_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_12_problem_age_6" name="sibling_12_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -2682,10 +3897,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="sibling_13_problem" name="sibling_13_problem">
+          <input type="text" class="form-control" id="sibling_13_problem_1" name="sibling_13_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="sibling_13_problem_age" name="sibling_13_problem_age">
+          <input type="text" class="form-control" id="sibling_13_problem_age_1" name="sibling_13_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="sibling_13_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_13_problem_2" name="sibling_13_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_13_problem_age_2" name="sibling_13_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="sibling_13_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_13_problem_3" name="sibling_13_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_13_problem_age_3" name="sibling_13_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="sibling_13_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_13_problem_4" name="sibling_13_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_13_problem_age_4" name="sibling_13_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="sibling_13_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_13_problem_5" name="sibling_13_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_13_problem_age_5" name="sibling_13_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="sibling_13_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_13_problem_6" name="sibling_13_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_13_problem_age_6" name="sibling_13_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -2752,10 +4007,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="sibling_14_problem" name="sibling_14_problem">
+          <input type="text" class="form-control" id="sibling_14_problem_1" name="sibling_14_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="sibling_14_problem_age" name="sibling_14_problem_age">
+          <input type="text" class="form-control" id="sibling_14_problem_age_1" name="sibling_14_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="sibling_14_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_14_problem_2" name="sibling_14_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_14_problem_age_2" name="sibling_14_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="sibling_14_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_14_problem_3" name="sibling_14_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_14_problem_age_3" name="sibling_14_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="sibling_14_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_14_problem_4" name="sibling_14_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_14_problem_age_4" name="sibling_14_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="sibling_14_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_14_problem_5" name="sibling_14_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_14_problem_age_5" name="sibling_14_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="sibling_14_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_14_problem_6" name="sibling_14_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_14_problem_age_6" name="sibling_14_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -2822,10 +4117,50 @@
           </select>
         </div>
         <div class="col-7">
-          <input type="text" class="form-control" id="sibling_15_problem" name="sibling_15_problem">
+          <input type="text" class="form-control" id="sibling_15_problem_1" name="sibling_15_problem_1">
         </div>
         <div class="col-2">
-          <input type="text" class="form-control" id="sibling_15_problem_age" name="sibling_15_problem_age">
+          <input type="text" class="form-control" id="sibling_15_problem_age_1" name="sibling_15_problem_age_1">
+        </div>
+      </div>
+      <div class="row" id="sibling_15_problem_row_2">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_15_problem_2" name="sibling_15_problem_2">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_15_problem_age_2" name="sibling_15_problem_age_2">
+        </div>
+      </div>
+      <div class="row" id="sibling_15_problem_row_3">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_15_problem_3" name="sibling_15_problem_3">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_15_problem_age_3" name="sibling_15_problem_age_3">
+        </div>
+      </div>
+      <div class="row" id="sibling_15_problem_row_4">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_15_problem_4" name="sibling_15_problem_4">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_15_problem_age_4" name="sibling_15_problem_age_4">
+        </div>
+      </div>
+      <div class="row" id="sibling_15_problem_row_5">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_15_problem_5" name="sibling_15_problem_5">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_15_problem_age_5" name="sibling_15_problem_age_5">
+        </div>
+      </div>
+      <div class="row" id="sibling_15_problem_row_6">
+        <div class="col-7 offset-2">
+          <input type="text" class="form-control" id="sibling_15_problem_6" name="sibling_15_problem_6">
+        </div>
+        <div class="col-2">
+          <input type="text" class="form-control" id="sibling_15_problem_age_6" name="sibling_15_problem_age_6">
         </div>
       </div>
       <div class="row">
@@ -2882,10 +4217,50 @@
         </select>
       </div>
       <div class="col-7">
-        <input type="text" class="form-control" id="mother_problem" name="mother_problem">
+        <input type="text" class="form-control" id="mother_problem_1" name="mother_problem_1">
       </div>
       <div class="col-2">
-        <input type="text" class="form-control" id="mother_problem_age" name="mother_problem_age">
+        <input type="text" class="form-control" id="mother_problem_age_1" name="mother_problem_age_1">
+      </div>
+    </div>
+    <div class="row" id="mother_problem_row_2">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="mother_problem_2" name="mother_problem_2">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="mother_problem_age_2" name="mother_problem_age_2">
+      </div>
+    </div>
+    <div class="row" id="mother_problem_row_3">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="mother_problem_3" name="mother_problem_3">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="mother_problem_age_3" name="mother_problem_age_3">
+      </div>
+    </div>
+    <div class="row" id="mother_problem_row_4">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="mother_problem_4" name="mother_problem_4">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="mother_problem_age_4" name="mother_problem_age_4">
+      </div>
+    </div>
+    <div class="row" id="mother_problem_row_5">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="mother_problem_5" name="mother_problem_5">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="mother_problem_age_5" name="mother_problem_age_5">
+      </div>
+    </div>
+    <div class="row" id="mother_problem_row_6">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="mother_problem_6" name="mother_problem_6">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="mother_problem_age_6" name="mother_problem_age_6">
       </div>
     </div>
     <div class="row">
@@ -2935,10 +4310,50 @@
         </select>
       </div>
       <div class="col-7">
-        <input type="text" class="form-control" id="father_problem" name="father_problem">
+        <input type="text" class="form-control" id="father_problem_1" name="father_problem_1">
       </div>
       <div class="col-2">
-        <input type="text" class="form-control" id="father_problem_age" name="father_problem_age">
+        <input type="text" class="form-control" id="father_problem_age_1" name="father_problem_age_1">
+      </div>
+    </div>
+    <div class="row" id="father_problem_row_2">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="father_problem_2" name="father_problem_2">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="father_problem_age_2" name="father_problem_age_2">
+      </div>
+    </div>
+    <div class="row" id="father_problem_row_3">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="father_problem_3" name="father_problem_3">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="father_problem_age_3" name="father_problem_age_3">
+      </div>
+    </div>
+    <div class="row" id="father_problem_row_4">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="father_problem_4" name="father_problem_4">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="father_problem_age_4" name="father_problem_age_4">
+      </div>
+    </div>
+    <div class="row" id="father_problem_row_5">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="father_problem_5" name="father_problem_5">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="father_problem_age_5" name="father_problem_age_5">
+      </div>
+    </div>
+    <div class="row" id="father_problem_row_6">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="father_problem_6" name="father_problem_6">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="father_problem_age_6" name="father_problem_age_6">
       </div>
     </div>
     <div class="row">
@@ -3027,10 +4442,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_1_problem" name="m_sibling_1_problem">
+            <input type="text" class="form-control" id="m_sibling_1_problem_1" name="m_sibling_1_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_1_problem_age" name="m_sibling_1_problem_age">
+            <input type="text" class="form-control" id="m_sibling_1_problem_age_1" name="m_sibling_1_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_1_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_1_problem_2" name="m_sibling_1_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_1_problem_age_2" name="m_sibling_1_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_1_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_1_problem_3" name="m_sibling_1_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_1_problem_age_3" name="m_sibling_1_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_1_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_1_problem_4" name="m_sibling_1_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_1_problem_age_4" name="m_sibling_1_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_1_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_1_problem_5" name="m_sibling_1_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_1_problem_age_5" name="m_sibling_1_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_1_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_1_problem_6" name="m_sibling_1_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_1_problem_age_6" name="m_sibling_1_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3097,10 +4552,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_2_problem" name="m_sibling_2_problem">
+            <input type="text" class="form-control" id="m_sibling_2_problem_1" name="m_sibling_2_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_2_problem_age" name="m_sibling_2_problem_age">
+            <input type="text" class="form-control" id="m_sibling_2_problem_age_1" name="m_sibling_2_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_2_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_2_problem_2" name="m_sibling_2_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_2_problem_age_2" name="m_sibling_2_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_2_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_2_problem_3" name="m_sibling_2_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_2_problem_age_3" name="m_sibling_2_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_2_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_2_problem_4" name="m_sibling_2_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_2_problem_age_4" name="m_sibling_2_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_2_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_2_problem_5" name="m_sibling_2_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_2_problem_age_5" name="m_sibling_2_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_2_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_2_problem_6" name="m_sibling_2_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_2_problem_age_6" name="m_sibling_2_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3167,10 +4662,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_3_problem" name="m_sibling_3_problem">
+            <input type="text" class="form-control" id="m_sibling_3_problem_1" name="m_sibling_3_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_3_problem_age" name="m_sibling_3_problem_age">
+            <input type="text" class="form-control" id="m_sibling_3_problem_age_1" name="m_sibling_3_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_3_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_3_problem_2" name="m_sibling_3_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_3_problem_age_2" name="m_sibling_3_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_3_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_3_problem_3" name="m_sibling_3_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_3_problem_age_3" name="m_sibling_3_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_3_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_3_problem_4" name="m_sibling_3_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_3_problem_age_4" name="m_sibling_3_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_3_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_3_problem_5" name="m_sibling_3_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_3_problem_age_5" name="m_sibling_3_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_3_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_3_problem_6" name="m_sibling_3_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_3_problem_age_6" name="m_sibling_3_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3237,10 +4772,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_4_problem" name="m_sibling_4_problem">
+            <input type="text" class="form-control" id="m_sibling_4_problem_1" name="m_sibling_4_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_4_problem_age" name="m_sibling_4_problem_age">
+            <input type="text" class="form-control" id="m_sibling_4_problem_age_1" name="m_sibling_4_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_4_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_4_problem_2" name="m_sibling_4_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_4_problem_age_2" name="m_sibling_4_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_4_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_4_problem_3" name="m_sibling_4_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_4_problem_age_3" name="m_sibling_4_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_4_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_4_problem_4" name="m_sibling_4_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_4_problem_age_4" name="m_sibling_4_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_4_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_4_problem_5" name="m_sibling_4_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_4_problem_age_5" name="m_sibling_4_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_4_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_4_problem_6" name="m_sibling_4_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_4_problem_age_6" name="m_sibling_4_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3307,10 +4882,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_5_problem" name="m_sibling_5_problem">
+            <input type="text" class="form-control" id="m_sibling_5_problem_1" name="m_sibling_5_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_5_problem_age" name="m_sibling_5_problem_age">
+            <input type="text" class="form-control" id="m_sibling_5_problem_age_1" name="m_sibling_5_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_5_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_5_problem_2" name="m_sibling_5_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_5_problem_age_2" name="m_sibling_5_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_5_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_5_problem_3" name="m_sibling_5_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_5_problem_age_3" name="m_sibling_5_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_5_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_5_problem_4" name="m_sibling_5_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_5_problem_age_4" name="m_sibling_5_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_5_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_5_problem_5" name="m_sibling_5_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_5_problem_age_5" name="m_sibling_5_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_5_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_5_problem_6" name="m_sibling_5_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_5_problem_age_6" name="m_sibling_5_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3377,10 +4992,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_6_problem" name="m_sibling_6_problem">
+            <input type="text" class="form-control" id="m_sibling_6_problem_1" name="m_sibling_6_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_6_problem_age" name="m_sibling_6_problem_age">
+            <input type="text" class="form-control" id="m_sibling_6_problem_age_1" name="m_sibling_6_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_6_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_6_problem_2" name="m_sibling_6_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_6_problem_age_2" name="m_sibling_6_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_6_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_6_problem_3" name="m_sibling_6_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_6_problem_age_3" name="m_sibling_6_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_6_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_6_problem_4" name="m_sibling_6_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_6_problem_age_4" name="m_sibling_6_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_6_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_6_problem_5" name="m_sibling_6_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_6_problem_age_5" name="m_sibling_6_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_6_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_6_problem_6" name="m_sibling_6_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_6_problem_age_6" name="m_sibling_6_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3447,10 +5102,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_7_problem" name="m_sibling_7_problem">
+            <input type="text" class="form-control" id="m_sibling_7_problem_1" name="m_sibling_7_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_7_problem_age" name="m_sibling_7_problem_age">
+            <input type="text" class="form-control" id="m_sibling_7_problem_age_1" name="m_sibling_7_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_7_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_7_problem_2" name="m_sibling_7_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_7_problem_age_2" name="m_sibling_7_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_7_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_7_problem_3" name="m_sibling_7_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_7_problem_age_3" name="m_sibling_7_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_7_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_7_problem_4" name="m_sibling_7_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_7_problem_age_4" name="m_sibling_7_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_7_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_7_problem_5" name="m_sibling_7_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_7_problem_age_5" name="m_sibling_7_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_7_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_7_problem_6" name="m_sibling_7_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_7_problem_age_6" name="m_sibling_7_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3517,10 +5212,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_8_problem" name="m_sibling_8_problem">
+            <input type="text" class="form-control" id="m_sibling_8_problem_1" name="m_sibling_8_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_8_problem_age" name="m_sibling_8_problem_age">
+            <input type="text" class="form-control" id="m_sibling_8_problem_age_1" name="m_sibling_8_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_8_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_8_problem_2" name="m_sibling_8_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_8_problem_age_2" name="m_sibling_8_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_8_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_8_problem_3" name="m_sibling_8_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_8_problem_age_3" name="m_sibling_8_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_8_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_8_problem_4" name="m_sibling_8_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_8_problem_age_4" name="m_sibling_8_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_8_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_8_problem_5" name="m_sibling_8_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_8_problem_age_5" name="m_sibling_8_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_8_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_8_problem_6" name="m_sibling_8_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_8_problem_age_6" name="m_sibling_8_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3587,10 +5322,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_9_problem" name="m_sibling_9_problem">
+            <input type="text" class="form-control" id="m_sibling_9_problem_1" name="m_sibling_9_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_9_problem_age" name="m_sibling_9_problem_age">
+            <input type="text" class="form-control" id="m_sibling_9_problem_age_1" name="m_sibling_9_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_9_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_9_problem_2" name="m_sibling_9_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_9_problem_age_2" name="m_sibling_9_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_9_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_9_problem_3" name="m_sibling_9_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_9_problem_age_3" name="m_sibling_9_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_9_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_9_problem_4" name="m_sibling_9_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_9_problem_age_4" name="m_sibling_9_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_9_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_9_problem_5" name="m_sibling_9_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_9_problem_age_5" name="m_sibling_9_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_9_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_9_problem_6" name="m_sibling_9_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_9_problem_age_6" name="m_sibling_9_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3657,10 +5432,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_10_problem" name="m_sibling_10_problem">
+            <input type="text" class="form-control" id="m_sibling_10_problem_1" name="m_sibling_10_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_10_problem_age" name="m_sibling_10_problem_age">
+            <input type="text" class="form-control" id="m_sibling_10_problem_age_1" name="m_sibling_10_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_10_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_10_problem_2" name="m_sibling_10_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_10_problem_age_2" name="m_sibling_10_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_10_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_10_problem_3" name="m_sibling_10_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_10_problem_age_3" name="m_sibling_10_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_10_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_10_problem_4" name="m_sibling_10_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_10_problem_age_4" name="m_sibling_10_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_10_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_10_problem_5" name="m_sibling_10_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_10_problem_age_5" name="m_sibling_10_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_10_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_10_problem_6" name="m_sibling_10_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_10_problem_age_6" name="m_sibling_10_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3727,10 +5542,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_11_problem" name="m_sibling_11_problem">
+            <input type="text" class="form-control" id="m_sibling_11_problem_1" name="m_sibling_11_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_11_problem_age" name="m_sibling_11_problem_age">
+            <input type="text" class="form-control" id="m_sibling_11_problem_age_1" name="m_sibling_11_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_11_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_11_problem_2" name="m_sibling_11_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_11_problem_age_2" name="m_sibling_11_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_11_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_11_problem_3" name="m_sibling_11_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_11_problem_age_3" name="m_sibling_11_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_11_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_11_problem_4" name="m_sibling_11_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_11_problem_age_4" name="m_sibling_11_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_11_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_11_problem_5" name="m_sibling_11_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_11_problem_age_5" name="m_sibling_11_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_11_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_11_problem_6" name="m_sibling_11_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_11_problem_age_6" name="m_sibling_11_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3797,10 +5652,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_12_problem" name="m_sibling_12_problem">
+            <input type="text" class="form-control" id="m_sibling_12_problem_1" name="m_sibling_12_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_12_problem_age" name="m_sibling_12_problem_age">
+            <input type="text" class="form-control" id="m_sibling_12_problem_age_1" name="m_sibling_12_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_12_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_12_problem_2" name="m_sibling_12_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_12_problem_age_2" name="m_sibling_12_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_12_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_12_problem_3" name="m_sibling_12_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_12_problem_age_3" name="m_sibling_12_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_12_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_12_problem_4" name="m_sibling_12_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_12_problem_age_4" name="m_sibling_12_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_12_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_12_problem_5" name="m_sibling_12_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_12_problem_age_5" name="m_sibling_12_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_12_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_12_problem_6" name="m_sibling_12_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_12_problem_age_6" name="m_sibling_12_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3867,10 +5762,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_13_problem" name="m_sibling_13_problem">
+            <input type="text" class="form-control" id="m_sibling_13_problem_1" name="m_sibling_13_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_13_problem_age" name="m_sibling_13_problem_age">
+            <input type="text" class="form-control" id="m_sibling_13_problem_age_1" name="m_sibling_13_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_13_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_13_problem_2" name="m_sibling_13_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_13_problem_age_2" name="m_sibling_13_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_13_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_13_problem_3" name="m_sibling_13_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_13_problem_age_3" name="m_sibling_13_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_13_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_13_problem_4" name="m_sibling_13_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_13_problem_age_4" name="m_sibling_13_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_13_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_13_problem_5" name="m_sibling_13_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_13_problem_age_5" name="m_sibling_13_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_13_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_13_problem_6" name="m_sibling_13_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_13_problem_age_6" name="m_sibling_13_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -3937,10 +5872,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_14_problem" name="m_sibling_14_problem">
+            <input type="text" class="form-control" id="m_sibling_14_problem_1" name="m_sibling_14_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_14_problem_age" name="m_sibling_14_problem_age">
+            <input type="text" class="form-control" id="m_sibling_14_problem_age_1" name="m_sibling_14_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_14_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_14_problem_2" name="m_sibling_14_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_14_problem_age_2" name="m_sibling_14_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_14_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_14_problem_3" name="m_sibling_14_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_14_problem_age_3" name="m_sibling_14_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_14_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_14_problem_4" name="m_sibling_14_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_14_problem_age_4" name="m_sibling_14_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_14_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_14_problem_5" name="m_sibling_14_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_14_problem_age_5" name="m_sibling_14_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_14_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_14_problem_6" name="m_sibling_14_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_14_problem_age_6" name="m_sibling_14_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -4007,10 +5982,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="m_sibling_15_problem" name="m_sibling_15_problem">
+            <input type="text" class="form-control" id="m_sibling_15_problem_1" name="m_sibling_15_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="m_sibling_15_problem_age" name="m_sibling_15_problem_age">
+            <input type="text" class="form-control" id="m_sibling_15_problem_age_1" name="m_sibling_15_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_15_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_15_problem_2" name="m_sibling_15_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_15_problem_age_2" name="m_sibling_15_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_15_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_15_problem_3" name="m_sibling_15_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_15_problem_age_3" name="m_sibling_15_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_15_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_15_problem_4" name="m_sibling_15_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_15_problem_age_4" name="m_sibling_15_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_15_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_15_problem_5" name="m_sibling_15_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_15_problem_age_5" name="m_sibling_15_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="m_sibling_15_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="m_sibling_15_problem_6" name="m_sibling_15_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="m_sibling_15_problem_age_6" name="m_sibling_15_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -4068,10 +6083,50 @@
         </select>
       </div>
       <div class="col-7">
-        <input type="text" class="form-control" id="m_mother_problem" name="m_mother_problem">
+        <input type="text" class="form-control" id="m_mother_problem_1" name="m_mother_problem_1">
       </div>
       <div class="col-2">
-        <input type="text" class="form-control" id="m_mother_problem_age" name="m_mother_problem_age">
+        <input type="text" class="form-control" id="m_mother_problem_age_1" name="m_mother_problem_age_1">
+      </div>
+    </div>
+    <div class="row" id="m_mother_problem_row_2">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="m_mother_problem_2" name="m_mother_problem_2">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="m_mother_problem_age_2" name="m_mother_problem_age_2">
+      </div>
+    </div>
+    <div class="row" id="m_mother_problem_row_3">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="m_mother_problem_3" name="m_mother_problem_3">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="m_mother_problem_age_3" name="m_mother_problem_age_3">
+      </div>
+    </div>
+    <div class="row" id="m_mother_problem_row_4">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="m_mother_problem_4" name="m_mother_problem_4">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="m_mother_problem_age_4" name="m_mother_problem_age_4">
+      </div>
+    </div>
+    <div class="row" id="m_mother_problem_row_5">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="m_mother_problem_5" name="m_mother_problem_5">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="m_mother_problem_age_5" name="m_mother_problem_age_5">
+      </div>
+    </div>
+    <div class="row" id="m_mother_problem_row_6">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="m_mother_problem_6" name="m_mother_problem_6">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="m_mother_problem_age_6" name="m_mother_problem_age_6">
       </div>
     </div>
     <div class="row">
@@ -4120,10 +6175,50 @@
         </select>
       </div>
       <div class="col-7">
-        <input type="text" class="form-control" id="m_father_problem" name="m_father_problem">
+        <input type="text" class="form-control" id="m_father_problem_1" name="m_father_problem_1">
       </div>
       <div class="col-2">
-        <input type="text" class="form-control" id="m_father_problem_age" name="m_father_problem_age">
+        <input type="text" class="form-control" id="m_father_problem_age_1" name="m_father_problem_age_1">
+      </div>
+    </div>
+    <div class="row" id="m_father_problem_row_2">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="m_father_problem_2" name="m_father_problem_2">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="m_father_problem_age_2" name="m_father_problem_age_2">
+      </div>
+    </div>
+    <div class="row" id="m_father_problem_row_3">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="m_father_problem_3" name="m_father_problem_3">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="m_father_problem_age_3" name="m_father_problem_age_3">
+      </div>
+    </div>
+    <div class="row" id="m_father_problem_row_4">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="m_father_problem_4" name="m_father_problem_4">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="m_father_problem_age_4" name="m_father_problem_age_4">
+      </div>
+    </div>
+    <div class="row" id="m_father_problem_row_5">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="m_father_problem_5" name="m_father_problem_5">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="m_father_problem_age_5" name="m_father_problem_age_5">
+      </div>
+    </div>
+    <div class="row" id="m_father_problem_row_6">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="m_father_problem_6" name="m_father_problem_6">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="m_father_problem_age_6" name="m_father_problem_age_6">
       </div>
     </div>
     <div class="row">
@@ -4685,10 +6780,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_1_problem" name="f_sibling_1_problem">
+            <input type="text" class="form-control" id="f_sibling_1_problem_1" name="f_sibling_1_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_1_problem_age" name="f_sibling_1_problem_age">
+            <input type="text" class="form-control" id="f_sibling_1_problem_age_1" name="f_sibling_1_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_1_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_1_problem_2" name="f_sibling_1_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_1_problem_age_2" name="f_sibling_1_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_1_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_1_problem_3" name="f_sibling_1_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_1_problem_age_3" name="f_sibling_1_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_1_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_1_problem_4" name="f_sibling_1_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_1_problem_age_4" name="f_sibling_1_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_1_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_1_problem_5" name="f_sibling_1_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_1_problem_age_5" name="f_sibling_1_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_1_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_1_problem_6" name="f_sibling_1_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_1_problem_age_6" name="f_sibling_1_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -4755,10 +6890,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_2_problem" name="f_sibling_2_problem">
+            <input type="text" class="form-control" id="f_sibling_2_problem_1" name="f_sibling_2_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_2_problem_age" name="f_sibling_2_problem_age">
+            <input type="text" class="form-control" id="f_sibling_2_problem_age_1" name="f_sibling_2_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_2_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_2_problem_2" name="f_sibling_2_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_2_problem_age_2" name="f_sibling_2_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_2_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_2_problem_3" name="f_sibling_2_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_2_problem_age_3" name="f_sibling_2_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_2_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_2_problem_4" name="f_sibling_2_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_2_problem_age_4" name="f_sibling_2_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_2_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_2_problem_5" name="f_sibling_2_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_2_problem_age_5" name="f_sibling_2_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_2_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_2_problem_6" name="f_sibling_2_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_2_problem_age_6" name="f_sibling_2_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -4825,10 +7000,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_3_problem" name="f_sibling_3_problem">
+            <input type="text" class="form-control" id="f_sibling_3_problem_1" name="f_sibling_3_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_3_problem_age" name="f_sibling_3_problem_age">
+            <input type="text" class="form-control" id="f_sibling_3_problem_age_1" name="f_sibling_3_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_3_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_3_problem_2" name="f_sibling_3_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_3_problem_age_2" name="f_sibling_3_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_3_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_3_problem_3" name="f_sibling_3_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_3_problem_age_3" name="f_sibling_3_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_3_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_3_problem_4" name="f_sibling_3_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_3_problem_age_4" name="f_sibling_3_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_3_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_3_problem_5" name="f_sibling_3_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_3_problem_age_5" name="f_sibling_3_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_3_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_3_problem_6" name="f_sibling_3_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_3_problem_age_6" name="f_sibling_3_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -4895,10 +7110,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_4_problem" name="f_sibling_4_problem">
+            <input type="text" class="form-control" id="f_sibling_4_problem_1" name="f_sibling_4_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_4_problem_age" name="f_sibling_4_problem_age">
+            <input type="text" class="form-control" id="f_sibling_4_problem_age_1" name="f_sibling_4_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_4_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_4_problem_2" name="f_sibling_4_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_4_problem_age_2" name="f_sibling_4_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_4_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_4_problem_3" name="f_sibling_4_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_4_problem_age_3" name="f_sibling_4_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_4_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_4_problem_4" name="f_sibling_4_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_4_problem_age_4" name="f_sibling_4_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_4_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_4_problem_5" name="f_sibling_4_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_4_problem_age_5" name="f_sibling_4_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_4_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_4_problem_6" name="f_sibling_4_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_4_problem_age_6" name="f_sibling_4_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -4965,10 +7220,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_5_problem" name="f_sibling_5_problem">
+            <input type="text" class="form-control" id="f_sibling_5_problem_1" name="f_sibling_5_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_5_problem_age" name="f_sibling_5_problem_age">
+            <input type="text" class="form-control" id="f_sibling_5_problem_age_1" name="f_sibling_5_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_5_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_5_problem_2" name="f_sibling_5_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_5_problem_age_2" name="f_sibling_5_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_5_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_5_problem_3" name="f_sibling_5_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_5_problem_age_3" name="f_sibling_5_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_5_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_5_problem_4" name="f_sibling_5_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_5_problem_age_4" name="f_sibling_5_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_5_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_5_problem_5" name="f_sibling_5_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_5_problem_age_5" name="f_sibling_5_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_5_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_5_problem_6" name="f_sibling_5_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_5_problem_age_6" name="f_sibling_5_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5035,10 +7330,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_6_problem" name="f_sibling_6_problem">
+            <input type="text" class="form-control" id="f_sibling_6_problem_1" name="f_sibling_6_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_6_problem_age" name="f_sibling_6_problem_age">
+            <input type="text" class="form-control" id="f_sibling_6_problem_age_1" name="f_sibling_6_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_6_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_6_problem_2" name="f_sibling_6_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_6_problem_age_2" name="f_sibling_6_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_6_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_6_problem_3" name="f_sibling_6_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_6_problem_age_3" name="f_sibling_6_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_6_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_6_problem_4" name="f_sibling_6_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_6_problem_age_4" name="f_sibling_6_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_6_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_6_problem_5" name="f_sibling_6_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_6_problem_age_5" name="f_sibling_6_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_6_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_6_problem_6" name="f_sibling_6_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_6_problem_age_6" name="f_sibling_6_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5105,10 +7440,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_7_problem" name="f_sibling_7_problem">
+            <input type="text" class="form-control" id="f_sibling_7_problem_1" name="f_sibling_7_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_7_problem_age" name="f_sibling_7_problem_age">
+            <input type="text" class="form-control" id="f_sibling_7_problem_age_1" name="f_sibling_7_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_7_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_7_problem_2" name="f_sibling_7_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_7_problem_age_2" name="f_sibling_7_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_7_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_7_problem_3" name="f_sibling_7_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_7_problem_age_3" name="f_sibling_7_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_7_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_7_problem_4" name="f_sibling_7_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_7_problem_age_4" name="f_sibling_7_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_7_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_7_problem_5" name="f_sibling_7_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_7_problem_age_5" name="f_sibling_7_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_7_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_7_problem_6" name="f_sibling_7_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_7_problem_age_6" name="f_sibling_7_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5175,10 +7550,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_8_problem" name="f_sibling_8_problem">
+            <input type="text" class="form-control" id="f_sibling_8_problem_1" name="f_sibling_8_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_8_problem_age" name="f_sibling_8_problem_age">
+            <input type="text" class="form-control" id="f_sibling_8_problem_age_1" name="f_sibling_8_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_8_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_8_problem_2" name="f_sibling_8_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_8_problem_age_2" name="f_sibling_8_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_8_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_8_problem_3" name="f_sibling_8_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_8_problem_age_3" name="f_sibling_8_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_8_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_8_problem_4" name="f_sibling_8_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_8_problem_age_4" name="f_sibling_8_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_8_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_8_problem_5" name="f_sibling_8_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_8_problem_age_5" name="f_sibling_8_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_8_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_8_problem_6" name="f_sibling_8_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_8_problem_age_6" name="f_sibling_8_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5245,10 +7660,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_9_problem" name="f_sibling_9_problem">
+            <input type="text" class="form-control" id="f_sibling_9_problem_1" name="f_sibling_9_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_9_problem_age" name="f_sibling_9_problem_age">
+            <input type="text" class="form-control" id="f_sibling_9_problem_age_1" name="f_sibling_9_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_9_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_9_problem_2" name="f_sibling_9_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_9_problem_age_2" name="f_sibling_9_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_9_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_9_problem_3" name="f_sibling_9_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_9_problem_age_3" name="f_sibling_9_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_9_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_9_problem_4" name="f_sibling_9_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_9_problem_age_4" name="f_sibling_9_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_9_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_9_problem_5" name="f_sibling_9_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_9_problem_age_5" name="f_sibling_9_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_9_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_9_problem_6" name="f_sibling_9_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_9_problem_age_6" name="f_sibling_9_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5315,10 +7770,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_10_problem" name="f_sibling_10_problem">
+            <input type="text" class="form-control" id="f_sibling_10_problem_1" name="f_sibling_10_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_10_problem_age" name="f_sibling_10_problem_age">
+            <input type="text" class="form-control" id="f_sibling_10_problem_age_1" name="f_sibling_10_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_10_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_10_problem_2" name="f_sibling_10_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_10_problem_age_2" name="f_sibling_10_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_10_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_10_problem_3" name="f_sibling_10_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_10_problem_age_3" name="f_sibling_10_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_10_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_10_problem_4" name="f_sibling_10_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_10_problem_age_4" name="f_sibling_10_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_10_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_10_problem_5" name="f_sibling_10_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_10_problem_age_5" name="f_sibling_10_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_10_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_10_problem_6" name="f_sibling_10_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_10_problem_age_6" name="f_sibling_10_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5385,10 +7880,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_11_problem" name="f_sibling_11_problem">
+            <input type="text" class="form-control" id="f_sibling_11_problem_1" name="f_sibling_11_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_11_problem_age" name="f_sibling_11_problem_age">
+            <input type="text" class="form-control" id="f_sibling_11_problem_age_1" name="f_sibling_11_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_11_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_11_problem_2" name="f_sibling_11_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_11_problem_age_2" name="f_sibling_11_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_11_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_11_problem_3" name="f_sibling_11_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_11_problem_age_3" name="f_sibling_11_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_11_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_11_problem_4" name="f_sibling_11_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_11_problem_age_4" name="f_sibling_11_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_11_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_11_problem_5" name="f_sibling_11_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_11_problem_age_5" name="f_sibling_11_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_11_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_11_problem_6" name="f_sibling_11_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_11_problem_age_6" name="f_sibling_11_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5455,10 +7990,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_12_problem" name="f_sibling_12_problem">
+            <input type="text" class="form-control" id="f_sibling_12_problem_1" name="f_sibling_12_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_12_problem_age" name="f_sibling_12_problem_age">
+            <input type="text" class="form-control" id="f_sibling_12_problem_age_1" name="f_sibling_12_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_12_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_12_problem_2" name="f_sibling_12_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_12_problem_age_2" name="f_sibling_12_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_12_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_12_problem_3" name="f_sibling_12_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_12_problem_age_3" name="f_sibling_12_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_12_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_12_problem_4" name="f_sibling_12_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_12_problem_age_4" name="f_sibling_12_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_12_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_12_problem_5" name="f_sibling_12_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_12_problem_age_5" name="f_sibling_12_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_12_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_12_problem_6" name="f_sibling_12_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_12_problem_age_6" name="f_sibling_12_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5525,10 +8100,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_13_problem" name="f_sibling_13_problem">
+            <input type="text" class="form-control" id="f_sibling_13_problem_1" name="f_sibling_13_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_13_problem_age" name="f_sibling_13_problem_age">
+            <input type="text" class="form-control" id="f_sibling_13_problem_age_1" name="f_sibling_13_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_13_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_13_problem_2" name="f_sibling_13_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_13_problem_age_2" name="f_sibling_13_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_13_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_13_problem_3" name="f_sibling_13_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_13_problem_age_3" name="f_sibling_13_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_13_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_13_problem_4" name="f_sibling_13_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_13_problem_age_4" name="f_sibling_13_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_13_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_13_problem_5" name="f_sibling_13_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_13_problem_age_5" name="f_sibling_13_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_13_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_13_problem_6" name="f_sibling_13_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_13_problem_age_6" name="f_sibling_13_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5595,10 +8210,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_14_problem" name="f_sibling_14_problem">
+            <input type="text" class="form-control" id="f_sibling_14_problem_1" name="f_sibling_14_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_14_problem_age" name="f_sibling_14_problem_age">
+            <input type="text" class="form-control" id="f_sibling_14_problem_age_1" name="f_sibling_14_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_14_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_14_problem_2" name="f_sibling_14_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_14_problem_age_2" name="f_sibling_14_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_14_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_14_problem_3" name="f_sibling_14_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_14_problem_age_3" name="f_sibling_14_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_14_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_14_problem_4" name="f_sibling_14_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_14_problem_age_4" name="f_sibling_14_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_14_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_14_problem_5" name="f_sibling_14_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_14_problem_age_5" name="f_sibling_14_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_14_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_14_problem_6" name="f_sibling_14_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_14_problem_age_6" name="f_sibling_14_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5665,10 +8320,50 @@
             </select>
           </div>
           <div class="col-7">
-            <input type="text" class="form-control" id="f_sibling_15_problem" name="f_sibling_15_problem">
+            <input type="text" class="form-control" id="f_sibling_15_problem_1" name="f_sibling_15_problem_1">
           </div>
           <div class="col-2">
-            <input type="text" class="form-control" id="f_sibling_15_problem_age" name="f_sibling_15_problem_age">
+            <input type="text" class="form-control" id="f_sibling_15_problem_age_1" name="f_sibling_15_problem_age_1">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_15_problem_row_2">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_15_problem_2" name="f_sibling_15_problem_2">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_15_problem_age_2" name="f_sibling_15_problem_age_2">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_15_problem_row_3">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_15_problem_3" name="f_sibling_15_problem_3">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_15_problem_age_3" name="f_sibling_15_problem_age_3">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_15_problem_row_4">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_15_problem_4" name="f_sibling_15_problem_4">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_15_problem_age_4" name="f_sibling_15_problem_age_4">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_15_problem_row_5">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_15_problem_5" name="f_sibling_15_problem_5">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_15_problem_age_5" name="f_sibling_15_problem_age_5">
+          </div>
+        </div>
+        <div class="row" id="f_sibling_15_problem_row_6">
+          <div class="col-7 offset-2">
+            <input type="text" class="form-control" id="f_sibling_15_problem_6" name="f_sibling_15_problem_6">
+          </div>
+          <div class="col-2">
+            <input type="text" class="form-control" id="f_sibling_15_problem_age_6" name="f_sibling_15_problem_age_6">
           </div>
         </div>
         <div class="row">
@@ -5726,10 +8421,50 @@
         </select>
       </div>
       <div class="col-7">
-        <input type="text" class="form-control" id="f_mother_problem" name="f_mother_problem">
+        <input type="text" class="form-control" id="f_mother_problem_1" name="f_mother_problem_1">
       </div>
       <div class="col-2">
-        <input type="text" class="form-control" id="f_mother_problem_age" name="f_mother_problem_age">
+        <input type="text" class="form-control" id="f_mother_problem_age_1" name="f_mother_problem_age_1">
+      </div>
+    </div>
+    <div class="row" id="f_mother_problem_row_2">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="f_mother_problem_2" name="f_mother_problem_2">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="f_mother_problem_age_2" name="f_mother_problem_age_2">
+      </div>
+    </div>
+    <div class="row" id="f_mother_problem_row_3">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="f_mother_problem_3" name="f_mother_problem_3">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="f_mother_problem_age_3" name="f_mother_problem_age_3">
+      </div>
+    </div>
+    <div class="row" id="f_mother_problem_row_4">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="f_mother_problem_4" name="f_mother_problem_4">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="f_mother_problem_age_4" name="f_mother_problem_age_4">
+      </div>
+    </div>
+    <div class="row" id="f_mother_problem_row_5">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="f_mother_problem_5" name="f_mother_problem_5">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="f_mother_problem_age_5" name="f_mother_problem_age_5">
+      </div>
+    </div>
+    <div class="row" id="f_mother_problem_row_6">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="f_mother_problem_6" name="f_mother_problem_6">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="f_mother_problem_age_6" name="f_mother_problem_age_6">
       </div>
     </div>
     <div class="row">
@@ -5778,10 +8513,50 @@
         </select>
       </div>
       <div class="col-7">
-        <input type="text" class="form-control" id="f_father_problem" name="f_father_problem">
+        <input type="text" class="form-control" id="f_father_problem_1" name="f_father_problem_1">
       </div>
       <div class="col-2">
-        <input type="text" class="form-control" id="f_father_problem_age" name="f_father_problem_age">
+        <input type="text" class="form-control" id="f_father_problem_age_1" name="f_father_problem_age_1">
+      </div>
+    </div>
+    <div class="row" id="f_father_problem_row_2">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="f_father_problem_2" name="f_father_problem_2">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="f_father_problem_age_2" name="f_father_problem_age_2">
+      </div>
+    </div>
+    <div class="row" id="f_father_problem_row_3">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="f_father_problem_3" name="f_father_problem_3">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="f_father_problem_age_3" name="f_father_problem_age_3">
+      </div>
+    </div>
+    <div class="row" id="f_father_problem_row_4">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="f_father_problem_4" name="f_father_problem_4">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="f_father_problem_age_4" name="f_father_problem_age_4">
+      </div>
+    </div>
+    <div class="row" id="f_father_problem_row_5">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="f_father_problem_5" name="f_father_problem_5">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="f_father_problem_age_5" name="f_father_problem_age_5">
+      </div>
+    </div>
+    <div class="row" id="f_father_problem_row_6">
+      <div class="col-7 offset-2">
+        <input type="text" class="form-control" id="f_father_problem_6" name="f_father_problem_6">
+      </div>
+      <div class="col-2">
+        <input type="text" class="form-control" id="f_father_problem_age_6" name="f_father_problem_age_6">
       </div>
     </div>
     <div class="row">

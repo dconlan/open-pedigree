@@ -1,7 +1,7 @@
 import PedigreeEditor from './script/pedigree';
 
-import '@fortawesome/fontawesome-free/js/fontawesome'
-import '@fortawesome/fontawesome-free/js/solid'
+import '@fortawesome/fontawesome-free/js/fontawesome';
+import '@fortawesome/fontawesome-free/js/solid';
 
 import '../public/vendor/xwiki/xwiki-min.css';
 import '../public/vendor/xwiki/fullScreen.css';
@@ -10,8 +10,9 @@ import '../public/vendor/phenotips/Widgets.css';
 import '../public/vendor/phenotips/DateTimePicker.css';
 import '../public/vendor/phenotips/Skin.css';
 import '../public/vendor/selectize/selectize.default.css';
-import TerminologyManager from "pedigree/terminology/terminologyManger";
-import FHIRTerminology from "pedigree/terminology/FHIRTerminology";
+import TerminologyManager from 'pedigree/terminology/terminologyManger';
+import FHIRTerminology from 'pedigree/terminology/FHIRTerminology';
+import CTSSTerminology from 'pedigree/terminology/CTSSTerminology';
 
 var editor;
 
