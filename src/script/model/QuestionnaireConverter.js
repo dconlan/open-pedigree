@@ -5,8 +5,8 @@ import NameSplitter from '../util/NameSplitter';
 
 
 function splitDate(dateString){
-  let ymdRegex =/^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?$/;
-  let dmyRegex =/^(((0?[1-9]|[1-2][0-9]|3[0-1])-)?(0?[1-9]|1[0-2])-)?([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)$/;
+  let ymdRegex =/^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)([-/](0[1-9]|1[0-2])([-/](0[1-9]|[1-2][0-9]|3[0-1]))?)?$/;
+  let dmyRegex =/^(((0?[1-9]|[1-2][0-9]|3[0-1])[-/])?(0?[1-9]|1[0-2])[-/])?([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)$/;
   let yearsRegex =/^([0-9]{1,3})\s*(y|yrs|years)$/i;
   let monthsRegex =/^([0-9]{1,2})\s*(m|mths|months)$/i;
   let weeksRegex =/^([0-9]{1,2})\s*(w|wks|weeks)$/i;
@@ -64,8 +64,30 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
   let ambiguousReferences = {};
   let hasID = {};
 
+  let conditions = [];
+
+  // get conditions from proband if there are any
   for (const qNode of questionnaireData) {
-    let person = QuestionnaireConverter.extractDataFromQuestionnaireNode(qNode);
+
+    if ('condition_code' in qNode){
+      for (let i=0; i< qNode.condition_code.length;i++){
+        let code = qNode.condition_code[i];
+        let display = ('condition_display' in qNode && qNode.condition_display.length > i)? qNode.condition_display[i] : '';
+        let other = ('condition_other' in qNode && qNode.condition_other.length > i)? qNode.condition_other[i] : '';
+
+        if ('__NMF__' === code){
+          conditions.push({code: other, display: other});
+        }
+        else {
+          conditions.push({code: code, display: display});
+        }
+      }
+      break;
+    }
+  }
+
+  for (const qNode of questionnaireData) {
+    let person = QuestionnaireConverter.extractDataFromQuestionnaireNode(qNode, conditions);
     nodeData.push(person);
     nodeByTag[qNode.tag] = person;
   }
@@ -281,7 +303,7 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
   return newG;
 };
 
-QuestionnaireConverter.extractDataFromQuestionnaireNode = function (qNode) {
+QuestionnaireConverter.extractDataFromQuestionnaireNode = function (qNode, conditions) {
   let properties = {id: qNode.tag, externalId: qNode.tag};
   let result = {
     properties: properties,
@@ -297,7 +319,8 @@ QuestionnaireConverter.extractDataFromQuestionnaireNode = function (qNode) {
   let comments = {};
 
   // name
-  const splitName = NameSplitter.split(qNode.name);
+
+  const splitName = NameSplitter.split(qNode.name ? qNode.name : '');
   result.splitName = splitName;
   if ('first' in splitName){
     properties.fName = splitName.first.join(' ');
@@ -385,22 +408,49 @@ QuestionnaireConverter.extractDataFromQuestionnaireNode = function (qNode) {
     comments.dod = 'd. ' + qNode.cause_death;
   }
 
-  if ('problem' in qNode){
-    properties.disorders = qNode.problem;
+  if ('condition_code' in qNode){
+    // this is the proband, so real conditions
+    properties.disorders = [];
+    for (let condition of conditions ){
+      properties.disorders.push(condition.code);
+    }
   }
 
-  if ('problem_age' in qNode){
-    let problemComments = []
-    for (let i=0;i<qNode.problem.length;i++){
-      if (qNode.problem_age[i]){
-        problemComments.push(qNode.problem[i] + ' dx ' + qNode.problem_age[i]);
+  if ('problem' in qNode){
+    properties.disorders = [];
+    let problemComments = [];
+    for (let i=0; i<qNode.problem.length; i++){
+      let p = qNode.problem[i];
+      let problemText = '';
+      let disorder = false;
+      if (p.startsWith('condition_')){
+        let indexChar = p[p.length - 1];
+        if (indexChar >= '1' && indexChar <= '9'){
+          let index = parseInt(indexChar) - 1;
+          if (index < conditions.length){
+            properties.disorders.push(conditions[index].code);
+            problemText = conditions[index].display;
+            disorder = true;
+          } else {
+            console.log(`qNode has condition which is out of range '${p}', condition count = ${conditions.length}`);
+            continue;
+          }
+        }else {
+          console.log(`qNode has bad problem value '${p}'`);
+          continue;
+        }
+      } else if ('other' === p && 'problem_other' in qNode && qNode.problem_other.length > i){
+        // not a condition, we will just add it as a comment.
+        problemText = qNode.problem_other[i];
+      }
+      if ('problem_age' in qNode && qNode.problem_age.length > i && qNode.problem_age[i].trim().length > 0 && problemText.trim().length > 0){
+        problemComments.push(problemText + ' dx ' + qNode.problem_age[i]);
+      } else if (problemText.trim().length > 0 && !disorder){
+        problemComments.push(problemText);
       }
     }
-    if (problemComments.length > 0){
-      comments.problem = problemComments.join('\n');
-    }
+    comments.problem = problemComments.join('\n');
   }
-
 
   // cause_death
   // has_problem
@@ -1924,12 +1974,33 @@ QuestionnaireConverter.createQuestionnaireDataFromGraph = function (pedigree, ol
     }
   }
 
-
+  let disorderLegend = editor.getDisorderLegend();
+  let probandDisorders = [];
+  if (pedigree.GG.properties[0].disorders) {
+    for (let prob of pedigree.GG.properties[0].disorders){
+      let disorderTerm = disorderLegend.getTerm(prob);
+      if (disorderTerm.getName() === disorderTerm.getID()){
+        probandDisorders.push({
+          code: '__NMF__',
+          display: 'No Match Found',
+          other: prob,
+          entry: prob
+        });
+      } else {
+        probandDisorders.push({
+          code: prob,
+          display: disorderTerm.getName(),
+          other: '',
+          entry: disorderTerm.getName()
+        });
+      }
+    }
+  }
   for (let i = 0; i <= pedigree.GG.getMaxRealVertexId(); i++) {
     if (!pedigree.GG.isPerson(i)) {
       continue;
     }
-    let nodeData = QuestionnaireConverter.createQuestionnaireDataNode(i, pedigree, connections, nextId);
+    let nodeData = QuestionnaireConverter.createQuestionnaireDataNode(i, pedigree, connections, nextId, probandDisorders);
     if (nodeData) {
       qData.push(nodeData);
     }
@@ -1971,7 +2042,7 @@ function findConnectedRelative(relations, connections, pedigree){
   return names.join(' ');
 }
 
-QuestionnaireConverter.createQuestionnaireDataNode = function(nodeIndex, pedigree, connections, nextId){
+QuestionnaireConverter.createQuestionnaireDataNode = function(nodeIndex, pedigree, connections, nextId, probandDisorders){
   let node = {};
   const properties = pedigree.GG.properties[nodeIndex];
 
@@ -1979,15 +2050,15 @@ QuestionnaireConverter.createQuestionnaireDataNode = function(nodeIndex, pedigre
 
   const partnerAttributes = ['name', 'dob', 'deceased', 'dod', 'cause_death'];
 
-  const childAttributes = ['name', 'sex', 'dob', 'parent_tag', 'problem_age_', 'deceased', 'dod', 'cause_death', 'has_problem'];
+  const childAttributes = ['name', 'sex', 'dob', 'parent_tag', 'problem_', 'deceased', 'dod', 'cause_death'];
 
-  const motherAttributes = ['name', 'dob', 'maiden_name', 'problem_age_', 'deceased', 'dod', 'cause_death', 'has_problem'];
+  const motherAttributes = ['name', 'dob', 'maiden_name', 'problem_', 'deceased', 'dod', 'cause_death'];
 
-  const fatherAttributes = ['name', 'dob', 'problem_age_', 'deceased', 'dod', 'cause_death', 'has_problem'];
+  const fatherAttributes = ['name', 'dob', 'problem_', 'deceased', 'dod', 'cause_death'];
 
-  const extendedAttributes = ['name', 'relationship', 'parent', 'problem'];
+  const extendedAttributes = ['name', 'relationship', 'parent', 'problem_', 'deceased', 'dod', 'cause_death'];
 
-  const siblingAttributes = ['name', 'sex', 'dob', 'sibling_type',  'problem_age_', 'deceased', 'dod', 'cause_death', 'has_problem'];
+  const siblingAttributes = ['name', 'sex', 'dob', 'sibling_type', 'problem_', 'deceased', 'dod', 'cause_death'];
 
   let attributes = undefined;
 
@@ -2077,8 +2148,6 @@ QuestionnaireConverter.createQuestionnaireDataNode = function(nodeIndex, pedigre
     }
   }
 
-
-
   for (const attrib of attributes){
     switch(attrib){
     case 'cause_death':
@@ -2088,12 +2157,13 @@ QuestionnaireConverter.createQuestionnaireDataNode = function(nodeIndex, pedigre
       break;
     case 'condition_':
       // proband problem fields
-      if (properties.disorders) {
-        let pi = 1;
-        for (let prob of properties.disorders){
-          node['problem_' + pi] = prob;
-          pi++;
-        }
+      for (let pi=0; pi < probandDisorders.length; pi++){
+        let disorder = probandDisorders[pi];
+        let ci = pi+1;
+        node['condition_code_' + ci] = disorder.code;
+        node['condition_display_' + ci] = disorder.display;
+        node['condition_other_' + ci] = disorder.other;
+        node['condition_entry_' + ci] = disorder.entry;
       }
       break;
     case 'deceased':
@@ -2114,14 +2184,6 @@ QuestionnaireConverter.createQuestionnaireDataNode = function(nodeIndex, pedigre
         node.dod = d.getDate() + '-' + (d.getMonth() + 1) + '-' + d.getFullYear();
       } else if (commentDob){
         node.dod = commentDod;
-      }
-      break;
-    case 'has_problem':
-      if ('problem_1' in node){
-        node.has_problem = "1";
-      }
-      else {
-        node.has_problem = "2";
       }
       break;
     case 'maiden_name':
@@ -2166,25 +2228,42 @@ QuestionnaireConverter.createQuestionnaireDataNode = function(nodeIndex, pedigre
         }
       }
       break;
-    case 'problem':
-      // problem is in extended, not multiple fields.
-      if (properties.disorders && properties.disorders.length > 0){
-        node.problem = properties.disorders.join('; ');
-      }
-      break;
-    case 'problem_age_':
-      // the problem_% and problem_age_% fields
+    case 'problem_':
+      // the problem_%, problem_other_% and problem_age_% fields
       {
         let problemSet = new Set(properties.disorders);
         let pi = 1;
         for (let cpa of commentProblem){
-          node['problem_' + pi] = cpa.problem;
+          let problem = 'other';
+          let found = false;
+          for (let di=0; di < probandDisorders.length; di++){
+            let disorder = probandDisorders[di];
+            if (cpa.problem === disorder.other || cpa.problem === disorder.code){
+              problem = 'condition_' + di;
+              found = true;
+              break;
+            }
+          }
+
+          node['problem_' + pi] = problem;
+          node['problem_other_' + pi] = (found) ? '' : cpa.problem;
           node['problem_age_' + pi] = cpa.age;
           problemSet.delete(cpa.problem);
           pi++;
         }
         for (let prob of problemSet){
-          node['problem_' + pi] = prob;
+          let problem = 'other';
+          let found = false;
+          for (let di=0; di < probandDisorders.length; di++){
+            let disorder = probandDisorders[di];
+            if (prob === disorder.other || prob === disorder.code){
+              problem = 'condition_' + di;
+              found = true;
+              break;
+            }
+          }
+          node['problem_' + pi] = problem;
+          node['problem_other_' + pi] = (found) ? '' : prob;
           node['problem_age_' + pi] = '';
           pi++;
         }
