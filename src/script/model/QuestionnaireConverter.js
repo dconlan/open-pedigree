@@ -93,16 +93,41 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
   }
   // try to add parent links
   let partners = [];
+  let halfSiblings = {
+    'mat_sibling' : { parentId : -1, people: []},
+    'pat_sibling' : { parentId : -1, people: []},
+    'mat_m_sibling' : { parentId : -1, people: []},
+    'pat_m_sibling' : { parentId : -1, people: []},
+    'mat_f_sibling' : { parentId : -1, people: []},
+    'pat_f_sibling' : { parentId : -1, people: []}
+  }
   let maxChildId = 0;
   for (const person of nodeData){
     QuestionnaireConverter.addParents(person, nodeByTag);
     if (person.qNode.tag.startsWith('partner_')){
       partners.push(person);
-    }
-    if (person.qNode.tag.startsWith('child_')){
+    } else if (person.qNode.tag.startsWith('child_')){
       let childId = parseInt(person.qNode.tag.substring(6));
       if (childId > maxChildId){
         maxChildId = childId;
+      }
+    } else if (person.qNode.tag.startsWith('sibling_')){
+      if (person.qNode.sibling_type === 'mat'){
+        halfSiblings.mat_sibling.people.push(person);
+      } else if (person.qNode.sibling_type === 'pat'){
+        halfSiblings.pat_sibling.people.push(person);
+      }
+    } else if (person.qNode.tag.startsWith('m_sibling_')){
+      if (person.qNode.sibling_type === 'mat'){
+        halfSiblings.mat_m_sibling.people.push(person);
+      } else if (person.qNode.sibling_type === 'pat'){
+        halfSiblings.pat_m_sibling.people.push(person);
+      }
+    } else if (person.qNode.tag.startsWith('f_sibling_')){
+      if (person.qNode.sibling_type === 'mat'){
+        halfSiblings.mat_f_sibling.people.push(person);
+      } else if (person.qNode.sibling_type === 'pat'){
+        halfSiblings.pat_f_sibling.people.push(person);
       }
     }
   }
@@ -261,10 +286,26 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
     let fatherID = null;
     let motherID = null;
     if (fatherLink == null) {
-      fatherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
-        'gender' : 'M',
-        'comments' : 'unknown'
-      }, newG.defaultPersonNodeWidth);
+      for(let hf of [halfSiblings.mat_sibling, halfSiblings.mat_m_sibling, halfSiblings.mat_f_sibling]){
+        if (hf.people.includes(person)){
+          if (hf.parentId == -1){
+            fatherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
+              'gender' : 'M',
+              'comments' : 'unknown'
+            }, newG.defaultPersonNodeWidth);
+            hf.parentId = fatherID;
+          } else {
+            fatherID = hf.parentId;
+          }
+          break;
+        }
+      }
+      if (fatherID == null){
+        fatherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
+          'gender' : 'M',
+          'comments' : 'unknown'
+        }, newG.defaultPersonNodeWidth);
+      }
     } else {
       fatherID = fatherLink;
       if (newG.properties[fatherID].gender === 'F') {
@@ -273,10 +314,26 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
       }
     }
     if (motherLink == null) {
-      motherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
-        'gender' : 'F',
-        'comments' : 'unknown'
-      }, newG.defaultPersonNodeWidth);
+      for(let hf of [halfSiblings.pat_sibling, halfSiblings.pat_m_sibling, halfSiblings.pat_f_sibling]){
+        if (hf.people.includes(person)){
+          if (hf.parentId == -1){
+            motherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
+              'gender' : 'F',
+              'comments' : 'unknown'
+            }, newG.defaultPersonNodeWidth);
+            hf.parentId = motherID;
+          } else {
+            motherID = hf.parentId;
+          }
+          break;
+        }
+      }
+      if (motherID == null) {
+        motherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
+          'gender' : 'F',
+          'comments' : 'unknown'
+        }, newG.defaultPersonNodeWidth);
+      }
     } else {
       motherID = motherLink;
       if (newG.properties[motherID].gender === 'M') {
