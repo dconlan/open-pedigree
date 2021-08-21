@@ -93,14 +93,6 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
   }
   // try to add parent links
   let partners = [];
-  let halfSiblings = {
-    'mat_sibling' : { parentId : -1, people: []},
-    'pat_sibling' : { parentId : -1, people: []},
-    'mat_m_sibling' : { parentId : -1, people: []},
-    'pat_m_sibling' : { parentId : -1, people: []},
-    'mat_f_sibling' : { parentId : -1, people: []},
-    'pat_f_sibling' : { parentId : -1, people: []}
-  }
   let maxChildId = 0;
   for (const person of nodeData){
     QuestionnaireConverter.addParents(person, nodeByTag);
@@ -110,24 +102,6 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
       let childId = parseInt(person.qNode.tag.substring(6));
       if (childId > maxChildId){
         maxChildId = childId;
-      }
-    } else if (person.qNode.tag.startsWith('sibling_')){
-      if (person.qNode.sibling_type === 'mat'){
-        halfSiblings.mat_sibling.people.push(person);
-      } else if (person.qNode.sibling_type === 'pat'){
-        halfSiblings.pat_sibling.people.push(person);
-      }
-    } else if (person.qNode.tag.startsWith('m_sibling_')){
-      if (person.qNode.sibling_type === 'mat'){
-        halfSiblings.mat_m_sibling.people.push(person);
-      } else if (person.qNode.sibling_type === 'pat'){
-        halfSiblings.pat_m_sibling.people.push(person);
-      }
-    } else if (person.qNode.tag.startsWith('f_sibling_')){
-      if (person.qNode.sibling_type === 'mat'){
-        halfSiblings.mat_f_sibling.people.push(person);
-      } else if (person.qNode.sibling_type === 'pat'){
-        halfSiblings.pat_f_sibling.people.push(person);
       }
     }
   }
@@ -248,6 +222,9 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
   let relationshipTracker = new RelationshipTracker(newG,
     defaultEdgeWeight);
 
+  // reuse the same fake partner we possible
+  let fakePartners = {};
+
   // second pass (once all vertex IDs are known): process parents/children & add edges
   for (const person of nodeData){
 
@@ -286,25 +263,14 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
     let fatherID = null;
     let motherID = null;
     if (fatherLink == null) {
-      for(let hf of [halfSiblings.mat_sibling, halfSiblings.mat_m_sibling, halfSiblings.mat_f_sibling]){
-        if (hf.people.includes(person)){
-          if (hf.parentId == -1){
-            fatherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
-              'gender' : 'M',
-              'comments' : 'unknown'
-            }, newG.defaultPersonNodeWidth);
-            hf.parentId = fatherID;
-          } else {
-            fatherID = hf.parentId;
-          }
-          break;
-        }
-      }
-      if (fatherID == null){
+      if (motherLink in fakePartners){
+        fatherID = fakePartners[motherLink];
+      } else {
         fatherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
           'gender' : 'M',
           'comments' : 'unknown'
         }, newG.defaultPersonNodeWidth);
+        fakePartners[motherLink] = fatherID;
       }
     } else {
       fatherID = fatherLink;
@@ -314,25 +280,14 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
       }
     }
     if (motherLink == null) {
-      for(let hf of [halfSiblings.pat_sibling, halfSiblings.pat_m_sibling, halfSiblings.pat_f_sibling]){
-        if (hf.people.includes(person)){
-          if (hf.parentId == -1){
-            motherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
-              'gender' : 'F',
-              'comments' : 'unknown'
-            }, newG.defaultPersonNodeWidth);
-            hf.parentId = motherID;
-          } else {
-            motherID = hf.parentId;
-          }
-          break;
-        }
-      }
-      if (motherID == null) {
+      if (fatherLink in fakePartners){
+        motherID = fakePartners[fatherLink];
+      } else {
         motherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
           'gender' : 'F',
           'comments' : 'unknown'
         }, newG.defaultPersonNodeWidth);
+        fakePartners[fatherLink] = motherID;
       }
     } else {
       motherID = motherLink;
