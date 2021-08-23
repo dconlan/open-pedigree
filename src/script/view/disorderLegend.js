@@ -130,7 +130,8 @@ var DisorderLegend = Class.create( Legend, {
       // [red/yellow]           prefColors = ["#FEE090", '#f8ebb7', '#eac080', '#bf6632', '#9a4500', '#a47841', '#c95555', '#ae6c57'];
       // [original yellow/blue] prefColors = ["#FEE090", '#E0F8F8', '#8ebbd6', '#4575B4', '#fca860', '#9a4500', '#81a270'];
       // [green]                prefColors = ['#81a270', '#c4e8c4', '#56a270', '#b3b16f', '#4a775a', '#65caa3'];
-      prefColors = ['#E0F8F8', '#92c0db', '#4575B4', '#949ab8', '#FEE090', '#bf6632', '#fca860', '#9a4500', '#d12943', '#00a2bf'];
+//      prefColors = ['#E0F8F8', '#92c0db', '#4575B4', '#949ab8', '#FEE090', '#bf6632', '#fca860', '#9a4500', '#d12943', '#00a2bf'];
+    prefColors = ['#9ad6d7', '#f8ad6a', '#c6f666', '#8c71cf', '#FEE090', '#ee99c7', '#34acb0', '#fd9135', '#6344be', '#b5f134'];
     usedColors.each( function(color) {
       prefColors = prefColors.without(color);
     });

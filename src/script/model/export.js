@@ -210,7 +210,7 @@ PedigreeExport.exportAsPDF = function(pedigree, privacySetting = "all", pageSize
           // rgb
           let colourSplit = rgbRegex.exec(colour);
           if (colourSplit != null){
-            colour = '#' + parseInt(colourSplit[1]).toString(16) + parseInt(colourSplit[2]).toString(16) + parseInt(colourSplit[2]).toString(16);
+            colour = '#' + parseInt(colourSplit[1]).toString(16) + parseInt(colourSplit[2]).toString(16) + parseInt(colourSplit[3]).toString(16);
           }
         }
       }
@@ -259,6 +259,7 @@ PedigreeExport.exportAsPDF = function(pedigree, privacySetting = "all", pageSize
     doc.text(cat.heading, xOffset, yOffset, {lineBreak: false});
     yOffset += lineOffset;
     for (let item of cat.items){
+      // console.log(item);
       doc.save();
       doc.rect(xOffset, yOffset, 8, 8).fill(item.colour, 1);
       doc.restore();
