@@ -194,18 +194,7 @@ var SaveLoadEngine = Class.create( {
 
     if (patientDataUrl) {
       document.fire('pedigree:save:start');
-      const image = $('canvas');
-      const background = image.getElementsByClassName('panning-background')[0];
-      const backgroundPosition = background.nextSibling;
-      const backgroundParent = background.parentNode;
-      backgroundParent.removeChild(background);
-      const bbox = image.down().getBBox();
-      let pedigreeImage = image.innerHTML.replace(/xmlns:xlink=".*?"/, '')
-        .replace(/width=".*?"/, '')
-        .replace(/height=".*?"/, '')
-        .replace(/viewBox=".*?"/, 'viewBox="' + bbox.x + ' ' + bbox.y + ' ' + bbox.width + ' ' + bbox.height + '" width="' + bbox.width + '" height="' + bbox.height + '" xmlns:xlink="http://www.w3.org/1999/xlink"');
-      const context = window.location.href.replace(/&/g, '&amp;');
-      pedigreeImage = pedigreeImage.split(context).join('');
+      let pedigreeImage = PedigreeExport.exportAsSVG(editor.getGraph().DG);
 
       const uri = new URI(patientDataUrl);
       if (uri.protocol() === 'local' ) {
@@ -267,7 +256,6 @@ var SaveLoadEngine = Class.create( {
           parameters: {'property#data': jsonData, 'property#image': pedigreeImage}
         });
       }
-      backgroundParent.insertBefore(background, backgroundPosition);
     }
   },
 
