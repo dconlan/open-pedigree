@@ -75,7 +75,7 @@ QuestionnaireConverter.initFromQuestionnaire = function (questionnaireData) {
         let display = ('condition_display' in qNode && qNode.condition_display.length > i)? qNode.condition_display[i] : '';
         let other = ('condition_other' in qNode && qNode.condition_other.length > i)? qNode.condition_other[i] : '';
 
-        if ('__NMF__' === code){
+        if ('_NRF_' === code){
           conditions.push({code: other, display: other});
         }
         else {
@@ -421,10 +421,36 @@ QuestionnaireConverter.extractDataFromQuestionnaireNode = function (qNode, condi
   }
 
   if ('condition_code' in qNode){
-    // this is the proband, so real conditions
-    properties.disorders = [];
-    for (let condition of conditions ){
-      properties.disorders.push(condition.code);
+    if ('proband' === qNode.tag){
+      // this is the proband, so real conditions
+      properties.disorders = [];
+      for (let condition of conditions ){
+        properties.disorders.push(condition.code);
+      }
+    }
+    else {
+      properties.disorders = [];
+      let problemComments = [];
+      for (let i=0; i< qNode.condition_code.length;i++){
+        let code = qNode.condition_code[i];
+        let display = ('condition_display' in qNode && qNode.condition_display.length > i)? qNode.condition_display[i] : code;
+        let other = ('condition_other' in qNode && qNode.condition_other.length > i)? qNode.condition_other[i] : '';
+        let problemText = '';
+        if ('_NRF_' === code){
+          properties.disorders.push(other);
+          problemText = other;
+        }
+        else {
+          properties.disorders.push(code);
+          problemText = display;
+        }
+        if ('condition_age' in qNode && qNode.condition_age.length > i && qNode.condition_age[i].trim().length > 0 && problemText.trim().length > 0){
+          problemComments.push(problemText + ' dx ' + qNode.condition_age[i]);
+        }
+      }
+      if (problemComments.length  > 0){
+        comments.problem = problemComments.join('\n');
+      }
     }
   }
 
@@ -1993,8 +2019,8 @@ QuestionnaireConverter.createQuestionnaireDataFromGraph = function (pedigree, ol
       let disorderTerm = disorderLegend.getTerm(prob);
       if (disorderTerm.getName() === disorderTerm.getID()){
         probandDisorders.push({
-          code: '__NMF__',
-          display: 'No Match Found',
+          code: '_NRF_',
+          display: 'No Result Found',
           other: prob,
           entry: prob
         });

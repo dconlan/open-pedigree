@@ -8,7 +8,7 @@
   <!-- Bootstrap CSS -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 
-  <title>Test Opener</title>
+  <title>Pedigree Questionnaire</title>
 </head>
 <body>
 <!-- Optional JavaScript -->
@@ -383,7 +383,7 @@
           result.push({ 'label' : v.display, 'value' : v.code});
         }
       }
-      result.push({'label' : 'No Match Found', 'value': '__NMF__'})
+      result.push({'label' : 'No Result Found', 'value': '_NRF_'})
       response( result );
     };
 
@@ -495,7 +495,7 @@
     let generateProbandProblemEntries = function(section, elementIteractions){
 
       elementIteractions.push({testElement: 'proband_condition_display_%', showElement: 'proband_condition_row_%%', count: formCounts.conditions, action: 'showIfNotEmpty'});
-      elementIteractions.push({testElement: 'proband_condition_code_%', showElement: 'proband_condition_other_row_%', count: formCounts.conditions, action: 'showIfEquals', actionValue:['__NMF__']});
+      elementIteractions.push({testElement: 'proband_condition_code_%', showElement: 'proband_condition_other_row_%', count: formCounts.conditions, action: 'showIfEquals', actionValue:['_NRF_']});
 
       for (let i=1;i<=formCounts.conditions;i++) {
         $(section).append(`
@@ -922,7 +922,7 @@
 
       for (let i=1; i<=formCounts.conditions; i++){
         const code = $('#proband_condition_code_' + i).val();
-        const display = ('__NMF__' === code) ? $('#proband_condition_other_' + i).val() : $('#proband_condition_display_' + i).val();
+        const display = ('_NRF_' === code) ? $('#proband_condition_other_' + i).val() : $('#proband_condition_display_' + i).val();
         if (code && code.trim().length > 0){
           conditionOptions.push({value: 'condition_' + i, display: display.trim()});
         }
@@ -1004,7 +1004,7 @@
       let isOK = true;
       let otherElement = $('#proband_condition_other_' + index);
       let code = $('#proband_condition_code_' + index).val();
-      if (code === '__NMF__'){
+      if (code === '_NRF_'){
         let other = otherElement.val();
         if (other === ''){
           isOK = false;

@@ -247,11 +247,57 @@ PedigreeExport.exportAsPDF = function(pedigree, privacySetting = "all", pageSize
   });
   let headingCount = legend.length;
 
+  // work out max width for text
+  let maxWidth = 0;
+  doc.save();
+  for (let cat of legend){
+    doc.fontSize(14);
+    const hw = doc.widthOfString(cat.heading);
+    if (hw > maxWidth){
+      maxWidth = hw;
+    }
+    for (let item of cat.items) {
+      doc.fontSize(10);
+      const w = doc.widthOfString(item.name + ' (' + item.cases + ')');
+      if (w > maxWidth) {
+        maxWidth = w;
+      }
+    }
+  }
+  doc.restore();
+
+  const legendPos = 'TopRight';
+
   let lineOffset = 14;
   let catOffset = 2;
-  let xOffset = 5;
   let legendHeight = (lineOffset * (headingCount+itemCount)) + (headingCount*catOffset) + 10;
+  let xOffset = 5;
   let yOffset = doc.page.height - legendHeight;
+  let pedigreeXOffset = 5;
+  let pedigreeYOffset = legendHeight;
+  let pedigreeWidth = doc.page.width - 10;
+  let pedigreeHeight = Math.max(doc.page.height - legendHeight, doc.page.height * 0.6);
+
+  if (legendPos === 'TopLeft') {
+    // easy one.
+    xOffset = 5;
+    yOffset = 5;
+    pedigreeYOffset = legendHeight;
+  } else if (legendPos === 'BottomLeft') {
+    xOffset = 5;
+    yOffset = doc.page.height - legendHeight;
+    pedigreeYOffset = 5;
+  } else if (legendPos === 'BottomRight') {
+    xOffset = doc.page.width - (20 + maxWidth) ;
+    yOffset = doc.page.height - legendHeight;
+    pedigreeYOffset = 5;
+  } else {
+    // 'TopRight' default
+    xOffset = doc.page.width - (20 + maxWidth) ;
+    yOffset = 5;
+    pedigreeYOffset = legendHeight;
+  }
+
 
   for (let cat of legend){
     doc.save();
@@ -280,11 +326,11 @@ PedigreeExport.exportAsPDF = function(pedigree, privacySetting = "all", pageSize
     // width: 595.28,
     // height: 841.89
     // use at least 60% of height for image, this may overwrite the legend.
-    height: Math.max(doc.page.height - legendHeight, doc.page.height * 0.6),
-    width: doc.page.width - 10
+    height: pedigreeHeight,
+    width: pedigreeWidth
   };
 
-  SVGtoPDF(doc, pedigreeImage, 5, 5, options);
+  SVGtoPDF(doc, pedigreeImage, pedigreeXOffset, pedigreeYOffset, options);
   doc.end();
   // doc.write('open-pedigree.pdf');
   return doc;
