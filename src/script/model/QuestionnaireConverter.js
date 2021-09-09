@@ -1,6 +1,7 @@
 import BaseGraph from 'pedigree/model/baseGraph';
 import RelationshipTracker from 'pedigree/model/relationshipTracker';
 import NameSplitter from '../util/NameSplitter';
+import TerminologyManager from 'pedigree/terminology/terminologyManger';
 
 
 
@@ -2017,7 +2018,8 @@ QuestionnaireConverter.createQuestionnaireDataFromGraph = function (pedigree, ol
   if (pedigree.GG.properties[0].disorders) {
     for (let prob of pedigree.GG.properties[0].disorders){
       let disorderTerm = disorderLegend.getTerm(prob);
-      if (disorderTerm.getName() === disorderTerm.getID()){
+      const desanitizedId = TerminologyManager.desanitizeID(disorderTerm.getTermType(), disorderTerm.getID());
+      if (disorderTerm.getName() === desanitizedId){
         probandDisorders.push({
           code: '_NRF_',
           display: 'No Result Found',
@@ -2210,8 +2212,9 @@ QuestionnaireConverter.createQuestionnaireDataNode = function(nodeIndex, pedigre
           let ci = 1;
           for (let prob of properties.disorders){
             let disorderTerm = disorderLegend.getTerm(prob);
+            const desanitizedId = TerminologyManager.desanitizeID(disorderTerm.getTermType(), disorderTerm.getID());
             let probText = prob;
-            if (disorderTerm.getName() === disorderTerm.getID()){
+            if (disorderTerm.getName() === desanitizedId){
               node['condition_code_' + ci] = '_NRF_';
               node['condition_display_' + ci] = 'No Result Found';
               node['condition_other_' + ci] = prob;
