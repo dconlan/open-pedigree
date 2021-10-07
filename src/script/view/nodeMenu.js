@@ -114,7 +114,7 @@ var NodeMenu = Class.create({
     // date
     var crtYear = new Date().getFullYear();
     window.dateTimePicker = new XWiki.widgets.DateTimePicker({
-      year_range: [crtYear - 99, crtYear + 1],
+      year_range: [crtYear - 149, crtYear + 1],
       after_navigate : function(date) {
         this._selector.updateSelectedDate({day: date.getDate(), month: date.getMonth(), year : date.getYear() + 1900}, false);
       }
@@ -183,7 +183,7 @@ var NodeMenu = Class.create({
     // var diseaseSelectizeOptions = {
     //   load: function (query, callback) {
     //     if (query.length <2) return callback();
-    //     var queryURL = 'https://genomics.ontoserver.csiro.au/fhir/' +
+    //     var queryURL = 'https://r4.ontoserver.csiro.au/fhir/' +
     //         'ValueSet/$expand?_format=json&url=' + 'http://www.omim.org' + "&count=" + 20 +
     //         "&filter=" + query;
     //     new Ajax.Request(queryURL, {

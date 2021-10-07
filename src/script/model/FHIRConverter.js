@@ -539,8 +539,8 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
           let isSympton = false;
           let isGene = false;
           let value = null;
-          // let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
-          // let geneSystem = 'http://www.genenames.org';
+          // let hpoSystem = 'http://purl.obolibrary.org/obo/hp.fhir';
+          // let geneSystem = 'http://www.genenames.org/geneId';
           let hpoSystem = TerminologyManager.getCodeSystem(PhenotypeTermType);
           let geneSystem = TerminologyManager.getCodeSystem(GeneTermType);
           if (observationResource.id.substring(0, carrierOb.length) === carrierOb) {
@@ -881,7 +881,7 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
     if (nodeProperties['hpoTerms']) {
       let hpoTerms = nodeProperties['hpoTerms'];
       let hpoLegend = editor.getHPOLegend();
-      // let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
+      // let hpoSystem = 'http://purl.obolibrary.org/obo/hp.fhir';
       let hpoSystem =  TerminologyManager.getCodeSystem(PhenotypeTermType);
 
       for (let j = 0; j < hpoTerms.length; j++) {
@@ -913,7 +913,7 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
     if (nodeProperties['candidateGenes']) {
       let candidateGenes = nodeProperties['candidateGenes'];
       let geneLegend = editor.getGeneLegend();
-      //let geneSystem = 'http://www.genenames.org';
+      //let geneSystem = 'http://www.genenames.org/geneId';
       let geneSystem = TerminologyManager.getCodeSystem(GeneTermType);
       for (let j = 0; j < candidateGenes.length; j++) {
         // @TODO change to use http://build.fhir.org/ig/HL7/genomics-reporting/obs-region-studied.html

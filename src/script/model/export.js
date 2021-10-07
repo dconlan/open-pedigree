@@ -1,7 +1,6 @@
 import FHIRConverter from 'pedigree/model/FHIRConverter'
 import GA4GHFHIRConverter from 'pedigree/model/GA4GHFHIRConverter'
 import PDFDocument from 'vendor/pdfkit/pdfkit.standalone';
-// import PDFDocument from 'vendor/pdfkit/pdfkit';
 import SVGtoPDF from 'vendor/pdfkit/svg-to-pdfkit';
 import blobStream from 'vendor/pdfkit/blob-stream';
 
@@ -172,7 +171,7 @@ PedigreeExport.exportAsSVG = function(pedigree, privacySetting = "all") {
 
 
 
-PedigreeExport.exportAsPDF = function(pedigree, privacySetting = "all", pageSize = 'A4', layout = 'landscape'){
+PedigreeExport.exportAsPDF = function(pedigree, privacySetting = "all", pageSize = 'A4', layout = 'landscape', legendPos = 'TopRight'){
   var pedigreeImage = PedigreeExport.exportAsSVG(pedigree, privacySetting);
 
   let legend = [];
@@ -265,8 +264,6 @@ PedigreeExport.exportAsPDF = function(pedigree, privacySetting = "all", pageSize
     }
   }
   doc.restore();
-
-  const legendPos = 'TopRight';
 
   let lineOffset = 14;
   let catOffset = 2;

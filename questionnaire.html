@@ -370,7 +370,7 @@
 
     let fhir_server_uri = $('#ontologyServer').val();
     if (!fhir_server_uri) {
-      fhir_server_uri = 'https://genomics.ontoserver.csiro.au/fhir/';
+      fhir_server_uri = 'https://r4.ontoserver.csiro.au/fhir/';
     }
     const value_set_url = ($('#sctMode').is(':checked')) ?
               'http://snomed.info/sct?fhir_vs=refset/32570581000036105' :
@@ -1133,7 +1133,7 @@
         </div>
         <div class="form-group">
           <label for="ontologyServer">Ontology Server</label>
-          <input type="text" class="form-control" id="ontologyServer" aria-describedby="contextHelp" value="https://genomics.ontoserver.csiro.au/fhir/" placeholder="Enter Server of leave blank for default">
+          <input type="text" class="form-control" id="ontologyServer" aria-describedby="contextHelp" value="https://r4.ontoserver.csiro.au/fhir/" placeholder="Enter Server of leave blank for default">
           <small id="ontologyHelp" class="form-text text-muted">The ontology server used to lookup disorders and phenotypes</small>
         </div>
         <div class="form-group">
