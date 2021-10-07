@@ -17,11 +17,11 @@ import VersionUpdater from 'pedigree/versionUpdater';
 import PedigreeEditorParameters from 'pedigree/pedigreeEditorParameters';
 
 import '../style/editor.css';
-import TerminologyManager from "pedigree/terminology/terminologyManger";
-import {DisorderTermType} from "pedigree/terminology/disorderTerm";
-import FHIRTerminology from "pedigree/terminology/FHIRTerminology";
-import {PhenotypeTermType} from "pedigree/terminology/phenotypeTerm";
-import {GeneTermType} from "pedigree/terminology/geneTerm";
+import TerminologyManager from 'pedigree/terminology/terminologyManger';
+import {DisorderTermType} from 'pedigree/terminology/disorderTerm';
+import FHIRTerminology from 'pedigree/terminology/FHIRTerminology';
+import {PhenotypeTermType} from 'pedigree/terminology/phenotypeTerm';
+import {GeneTermType} from 'pedigree/terminology/geneTerm';
 
 /**
  * The main class of the Pedigree Editor, responsible for initializing all the basic elements of the app.
@@ -48,17 +48,17 @@ var PedigreeEditor = Class.create({
     if (!TerminologyManager.hasType(DisorderTermType)){
       // initialise default disorder terminology
       TerminologyManager.addTerminology(DisorderTermType, new FHIRTerminology(
-          DisorderTermType, 'http://www.omim.org', /[0-9]+/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://www.omim.org'));
+        DisorderTermType, 'http://www.omim.org', /[0-9]+/, 20, 'https://r4.ontoserver.csiro.au/fhir/', 'http://www.omim.org'));
     }
     if (!TerminologyManager.hasType(PhenotypeTermType)){
       // initialise default phenotype terminology
       TerminologyManager.addTerminology(PhenotypeTermType, new FHIRTerminology(
-          PhenotypeTermType, 'http://purl.obolibrary.org/obo/hp.owl', /^(http:\/\/)|(HP:)/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://purl.obolibrary.org/obo/hp.owl?vs'));
+        PhenotypeTermType, 'http://purl.obolibrary.org/obo/hp.fhir', /^(http:\/\/)|(HP:)/, 20, 'https://r4.ontoserver.csiro.au/fhir/', 'http://purl.obolibrary.org/obo/hp.fhir?vs'));
     }
     if (!TerminologyManager.hasType(GeneTermType)){
       // initialise default gene terminology
       TerminologyManager.addTerminology(GeneTermType, new FHIRTerminology(
-          GeneTermType, 'http://www.genenames.org', /^HGNC:/, 20, 'https://genomics.ontoserver.csiro.au/fhir/', 'http://www.genenames.org'));
+        GeneTermType, 'http://www.genenames.org/geneId', /^HGNC:/, 20, 'https://r4.ontoserver.csiro.au/fhir/', 'http://www.genenames.org/geneId?vs'));
     }
 
 
@@ -132,11 +132,10 @@ var PedigreeEditor = Class.create({
 
     var closeButton = $('action-close');
     closeButton && closeButton.on('click', function(event) {
-      if (returnUrl === "#CloseWindow"){
-        console.log("Attempt to close the window");
+      if (returnUrl === '#CloseWindow'){
+        console.log('Attempt to close the window');
         window.close();
-      }
-      else if (returnUrl) {
+      } else if (returnUrl) {
         window.location = returnUrl;
       }
     });
@@ -256,11 +255,9 @@ var PedigreeEditor = Class.create({
   getLegend: function(type) {
     if (type == DisorderTermType){
       return this._disorderLegend;
-    }
-    else if (type == PhenotypeTermType){
+    } else if (type == PhenotypeTermType){
       return this._hpoLegend;
-    }
-    else if (type == GeneTermType){
+    } else if (type == GeneTermType){
       return this._geneLegend;
     }
     return undefined;

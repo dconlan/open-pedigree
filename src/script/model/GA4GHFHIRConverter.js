@@ -306,7 +306,7 @@ GA4GHFHIRConverter.extractDataFromFMH = function (familyHistoryResource,
   }
   if (familyHistoryResource.relationship && familyHistoryResource.relationship.coding){
     for (const coding of familyHistoryResource.relationship.coding){
-      if (coding.system === 'http://purl.org/ga4gh/rel.fhir'){
+      if (coding.system === 'http://purl.org/ga4gh/kin.fhir'){
         rel = coding.code;
         break;
       }
@@ -322,7 +322,7 @@ GA4GHFHIRConverter.extractDataFromFMH = function (familyHistoryResource,
     return;
   }
 
-  if (rel === 'REL:027') {
+  if (rel === 'KIN:027') {
     // NMTH
     if ('mother' in firstNodeData && !('father' in firstNodeData)){
       // we already think we have a mother, may be a parent
@@ -330,7 +330,7 @@ GA4GHFHIRConverter.extractDataFromFMH = function (familyHistoryResource,
     }
     firstNodeData.mother = secondNodeData.nodeId;
   }
-  else if (rel === 'REL:028'){
+  else if (rel === 'KIN:028'){
     // NFTH
     if ('father' in firstNodeData && !('mother' in firstNodeData)){
       // we already think we have a father, may be a parent
@@ -338,7 +338,7 @@ GA4GHFHIRConverter.extractDataFromFMH = function (familyHistoryResource,
     }
     firstNodeData.father = secondNodeData.nodeId;
   }
-  else if (rel === 'REL:003' || rel === 'REL:022'){
+  else if (rel === 'KIN:003' || rel === 'KIN:022'){
     // NPRN or ADOPTPRN
     if (secondNodeData.gender === 'M' && !('father' in firstNodeData)){
       firstNodeData.father = secondNodeData.nodeId;
@@ -353,7 +353,7 @@ GA4GHFHIRConverter.extractDataFromFMH = function (familyHistoryResource,
       firstNodeData.mother = secondNodeData.nodeId;
     }
   }
-  else if (rel === 'REL:026'){
+  else if (rel === 'KIN:026'){
     // SIGOTHR
     if ('partners' in firstNodeData){
       firstNodeData.partners.push(secondNodeData.nodeId);
@@ -368,7 +368,7 @@ GA4GHFHIRConverter.extractDataFromFMH = function (familyHistoryResource,
       secondNodeData.partners = [firstNodeData.nodeId];
     }
   }
-  else if (rel === 'REL:030'){
+  else if (rel === 'KIN:030'){
     // CONSANG
     if ('cpartners' in firstNodeData){
       firstNodeData.cpartners.push(secondNodeData.nodeId);
@@ -383,10 +383,10 @@ GA4GHFHIRConverter.extractDataFromFMH = function (familyHistoryResource,
       secondNodeData.cpartners = [firstNodeData.nodeId];
     }
   }
-  else if (rel === 'REL:009' || rel === 'REL:010' || rel === 'REL:011'){
+  else if (rel === 'KIN:009' || rel === 'KIN:010' || rel === 'KIN:011'){
     // TWIN or Monozygotic twin or Polyzygotic twin
-    firstNodeData.properties.monozygotic = (rel === 'REL:010');
-    secondNodeData.properties.monozygotic = (rel === 'REL:010');
+    firstNodeData.properties.monozygotic = (rel === 'KIN:010');
+    secondNodeData.properties.monozygotic = (rel === 'KIN:010');
     let firstNodeTwinGroup = twinTracker.lookup[firstNodeData.nodeId];
     let secondNodeTwinGroup = twinTracker.lookup[secondNodeData.nodeId];
 
@@ -861,8 +861,8 @@ function broken(familyHistoryResource, subjectResource, containedResourcesLookup
           let isSympton = false;
           let isGene = false;
           let value = null;
-          // let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
-          // let geneSystem = 'http://www.genenames.org';
+          // let hpoSystem = 'http://purl.obolibrary.org/obo/hp.fhir';
+          // let geneSystem = 'http://www.genenames.org/geneId';
           let hpoSystem = TerminologyManager.getCodeSystem(PhenotypeTermType);
           let geneSystem = TerminologyManager.getCodeSystem(GeneTermType);
           if (observationResource.id.substring(0, carrierOb.length) === carrierOb) {
@@ -1370,179 +1370,71 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
 
 
 GA4GHFHIRConverter.familyHistoryLookup = {
-  'notFound': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:001',
-    'display': 'Relative'
-  },
-  'REL:001': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:001',
-    'display': 'Relative'
-  },
-  'REL:002': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:002',
-    'display': 'Biological relative'
-  },
-  'REL:003': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:003',
-    'display': 'Biological parent'
-  },
-  'REL:004': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:004',
-    'display': 'Sperm / ovum donor'
-  },
-  'REL:005': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:005',
-    'display': 'Gestational carrier'
-  },
-  'REL:006': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:006',
-    'display': 'Surrogate ovum donor'
-  },
-  'REL:007': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:007',
-    'display': 'Biological sibling'
-  },
-  'REL:008': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:008',
-    'display': 'Full sibling'
-  },
-  'REL:009': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:009',
-    'display': 'Twin'
-  },
-  'REL:010': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:010',
-    'display': 'Monozygotic twin'
-  },
-  'REL:011': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:011',
-    'display': 'Polyzygotic twin'
-  },
-  'REL:012': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:012',
-    'display': 'Half-sibling'
-  },
-  'REL:013': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:013',
-    'display': 'parental-sibling'
-  },
-  'REL:014': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:014',
-    'display': 'Cousin'
-  },
-  'REL:015': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:015',
-    'display': 'Maternal cousin'
-  },
-  'REL:016': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:016',
-    'display': 'Paternal cousin'
-  },
-  'REL:017': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:017',
-    'display': 'Grandparent'
-  },
-  'REL:018': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:018',
-    'display': 'Great-grandparent'
-  },
-  'REL:019': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:019',
-    'display': 'Social / legal relative'
-  },
-  'REL:020': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:020',
-    'display': 'Parent figure'
-  },
-  'REL:021': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:021',
-    'display': 'Foster parent'
-  },
-  'REL:022': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:022',
-    'display': 'Adoptive parent'
-  },
-  'REL:023': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:023',
-    'display': 'Step-parent'
-  },
-  'REL:024': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:024',
-    'display': 'Sibling figure'
-  },
-  'REL:025': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:025',
-    'display': 'Step-sibling'
-  },
-  'REL:026': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:026',
-    'display': 'Significant other'
-  },
-  'REL:027': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:027',
-    'display': 'Biological mother'
-  },
-  'REL:028': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:028',
-    'display': 'Biological father'
-  },
-  'REL:029': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:029',
-    'display': 'mitochondrial donor'
-  },
-  'REL:030': {
-    'system': 'http://purl.org/ga4gh/rel.fhir',
-    'code': 'REL:030',
-    'display': 'Consanguineous partner'
-  }
+  'notFound': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:001', 'display': 'isRelative' },
+  'KIN:001': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:001', 'display': 'isRelative' },
+  'KIN:002': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:002', 'display': 'isBiologicalRelative' },
+  'KIN:003': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:003', 'display': 'isBiologicalParent' },
+  'KIN:004': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:004', 'display': 'isSpermDonor' },
+  'KIN:005': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:005', 'display': 'isGestationalCarrier' },
+  'KIN:006': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:006', 'display': 'isSurrogateOvumDonor' },
+  'KIN:007': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:007', 'display': 'isBiologicalSibling' },
+  'KIN:008': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:008', 'display': 'isFullsibling' },
+  'KIN:009': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:009', 'display': 'isTwin' },
+  'KIN:010': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:010', 'display': 'isMonozygoticTwin' },
+  'KIN:011': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:011', 'display': 'isPolyzygoticTwin' },
+  'KIN:012': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:012', 'display': 'isHalfSibling' },
+  'KIN:013': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:013', 'display': 'isParentalSibling' },
+  'KIN:014': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:014', 'display': 'isCousin' },
+  'KIN:015': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:015', 'display': 'isMaternalCousin' },
+  'KIN:016': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:016', 'display': 'isPaternalCousin' },
+  'KIN:017': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:017', 'display': 'isGrandparent' },
+  'KIN:018': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:018', 'display': 'isGreatGrandparent' },
+  'KIN:019': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:019', 'display': 'isSocialLegalRelative' },
+  'KIN:020': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:020', 'display': 'isParentFigure' },
+  'KIN:021': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:021', 'display': 'isFosterParent' },
+  'KIN:022': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:022', 'display': 'isAdoptiveParent' },
+  'KIN:023': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:023', 'display': 'isStepParent' },
+  'KIN:024': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:024', 'display': 'isSiblingFigure' },
+  'KIN:025': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:025', 'display': 'isStepSibling' },
+  'KIN:026': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:026', 'display': 'isPartner' },
+  'KIN:027': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:027', 'display': 'isBiologicalMother' },
+  'KIN:028': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:028', 'display': 'isBiologicalFather' },
+  'KIN:029': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:029', 'display': 'isMitochondrialDonor' },
+  'KIN:030': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:030', 'display': 'isConsanguineousPartner' },
+  'KIN:031': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:031', 'display': 'hasSex' },
+  'KIN:032': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:032', 'display': 'isBiologicalChild' },
+  'KIN:033': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:033', 'display': 'hasBiologicalChild' },
+  'KIN:034': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:034', 'display': 'hasBiologicalParent' },
+  'KIN:035': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:035', 'display': 'hasGrandparent' },
+  'KIN:036': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:036', 'display': 'isGrandchild' },
+  'KIN:037': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:037', 'display': 'hasGrandchild' },
+  'KIN:038': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:038', 'display': 'isOvumDonor' },
+  'KIN:039': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:039', 'display': 'hasGestationalCarrier' },
+  'KIN:040': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:040', 'display': 'hasBiologicalFather' },
+  'KIN:041': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:041', 'display': 'hasBiologicalMother' },
+  'KIN:042': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:042', 'display': 'hasOvumDonor' },
+  'KIN:043': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:043', 'display': 'hasSurrogateOvumDonor' },
+  'KIN:044': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:044', 'display': 'hasSpermDonor' },
+  'KIN:045': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:045', 'display': 'hasGreatGrandParent' },
+  'KIN:046': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:046', 'display': 'hasParentalSibling' },
 
 };
 
 
 GA4GHFHIRConverter.relationshipMap = {
-  'NMTH':      'REL:027',
-  'NFTH':      'REL:028',
-  'NPRN':      'REL:003',
-  'ADOPTMTH':  'REL:022',
-  'ADOPTFTH':  'REL:022',
-  'ADOPTPRN':  'REL:022',
-  'SIGOTHR':   'REL:026',
-  'CONSANG':   'REL:030',
-  'TWIN':      'REL:009',
-  'TWINSIS':   'REL:010',
-  'TWINBRO':   'REL:010',
-  'FTWINSIS':  'REL:011',
-  'FTWINBRO':  'REL:011',
+  'NMTH':      'KIN:027',
+  'NFTH':      'KIN:028',
+  'NPRN':      'KIN:003',
+  'ADOPTMTH':  'KIN:022',
+  'ADOPTFTH':  'KIN:022',
+  'ADOPTPRN':  'KIN:022',
+  'SIGOTHR':   'KIN:026',
+  'CONSANG':   'KIN:030',
+  'TWIN':      'KIN:009',
+  'TWINSIS':   'KIN:010',
+  'TWINBRO':   'KIN:010',
+  'FTWINSIS':  'KIN:011',
+  'FTWINBRO':  'KIN:011',
 };
 
 GA4GHFHIRConverter.processTreeNode = function (index, pedigree, privacySetting, knownFhirPatienReference,
@@ -1851,7 +1743,7 @@ GA4GHFHIRConverter.addObservations = function (nodeProperties, ref, observations
   if (nodeProperties['hpoTerms']) {
     let hpoTerms = nodeProperties['hpoTerms'];
     let hpoLegend = editor.getHPOLegend();
-    // let hpoSystem = 'http://purl.obolibrary.org/obo/hp.owl';
+    // let hpoSystem = 'http://purl.obolibrary.org/obo/hp.fhir';
     let hpoSystem = TerminologyManager.getCodeSystem(PhenotypeTermType);
 
     for (let j = 0; j < hpoTerms.length; j++) {
@@ -1880,7 +1772,7 @@ GA4GHFHIRConverter.addObservations = function (nodeProperties, ref, observations
   if (nodeProperties['candidateGenes']) {
     let candidateGenes = nodeProperties['candidateGenes'];
     let geneLegend = editor.getGeneLegend();
-    //let geneSystem = 'http://www.genenames.org';
+    //let geneSystem = 'http://www.genenames.org/geneId';
     let geneSystem = TerminologyManager.getCodeSystem(GeneTermType);
     for (let j = 0; j < candidateGenes.length; j++) {
       // @TODO change to use http://build.fhir.org/ig/HL7/genomics-reporting/obs-region-studied.html
