@@ -7,6 +7,20 @@ import {PhenotypeTermType} from 'pedigree/terminology/phenotypeTerm';
 import FHIRConverter from './FHIRConverter';
 
 
+/**
+ * Code taken from https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid
+ * @returns UUID
+ */
+function uuidv4() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+  );
+}
+
+function generateUUID() {
+  return 'urn:uuid:' + uuidv4();
+}
+
 var GA4GHFHIRConverter = function () {
 };
 
@@ -30,6 +44,9 @@ GA4GHFHIRConverter.initFromFHIR = function (inputText) {
     throw 'Unable to import pedigree: input is not a valid JSON string '
     + err;
   }
+  let compositionResource = undefined;
+  let containedResources = undefined;
+
   if ((inputResource.resourceType === 'Composition' || inputResource.resourceType === 'List')
        && (!inputResource.meta || !inputResource.meta.profile || !inputResource.meta.profile.includes('http://purl.org/ga4gh/pedigree-fhir-ig/StructureDefinition/Pedigree'))) {
 
@@ -38,17 +55,36 @@ GA4GHFHIRConverter.initFromFHIR = function (inputText) {
   }
   else if (inputResource.resourceType === 'Composition' && inputResource.meta  && inputResource.meta.profile
     && inputResource.meta.profile.includes('http://purl.org/ga4gh/pedigree-fhir-ig/StructureDefinition/Pedigree')) {
+    compositionResource = inputResource;
+    containedResources = inputResource.contained;
+  } else if (inputResource.resourceType === 'Bundle' && inputResource.type === 'document' ) {
+    compositionResource = inputResource.entry[0].resource;
+    if (compositionResource && compositionResource.resourceType === 'Composition' && compositionResource.meta  && compositionResource.meta.profile
+      && compositionResource.meta.profile.includes('http://purl.org/ga4gh/pedigree-fhir-ig/StructureDefinition/Pedigree')){
+      containedResources = inputResource.entry.map(entry => entry.resource);
+    }
+    else {
+      compositionResource = null;
+    }
+  }
 
-    let twinTracker = {'nextTwinGroupId': 1, 'lookup': {}, 'groupIdLookup': {}};
-    let containedResourcesLookup = {};
-    let patientResources = [];
-    let familyHistoryResources = [];
-    let conditionResources = [];
-    let observationResources = [];
-    if (inputResource.contained) {
-      let containedArr = inputResource.contained;
-      for (let i = 0; i < containedArr.length; i++) {
-        containedResourcesLookup['#' + containedArr[i].id] = containedArr[i];
+  if (!compositionResource || !containedResources) {
+    throw 'Unable to import pedigree: input is not expected JSON format';
+  }
+
+
+  let twinTracker = {'nextTwinGroupId': 1, 'lookup': {}, 'groupIdLookup': {}};
+  let containedResourcesLookup = {};
+  let patientResources = [];
+  let familyHistoryResources = [];
+  let conditionResources = [];
+  let observationResources = [];
+
+  if (containedResources) {
+    let containedArr = containedResources;
+    for (let i = 0; i < containedResources.length; i++) {
+      if (containedArr[i] && containedArr[i].hasOwnProperty('id')){
+        containedResourcesLookup[this.getReference(containedArr[i].id)] = containedArr[i];
         if (containedArr[i].resourceType === 'Patient') {
           patientResources.push(containedArr[i]);
         }
@@ -63,226 +99,222 @@ GA4GHFHIRConverter.initFromFHIR = function (inputText) {
         }
       }
     }
-    let subjectRef = inputResource.subject;
-    let subjectResource = null;
-    if (subjectRef && subjectRef.reference
-      && subjectRef.reference[0] === '#') {
-      // we have a contained patient
-      subjectResource = containedResourcesLookup[subjectRef.reference];
-    }
-    let newG = new BaseGraph();
+  }
+  let subjectRef = compositionResource.subject;
+  let subjectResource = null;
+  if (subjectRef && subjectRef.reference
+    && (subjectRef.reference[0] === '#' || subjectRef.reference.startsWith('urn:uuid:'))) {
+    // we have a contained patient
+    subjectResource = containedResourcesLookup[subjectRef.reference];
+  }
+  let newG = new BaseGraph();
 
-    let nameToID = {};
-    let externalIDToID = {};
-    let ambiguousReferences = {};
-    let hasID = {};
+  let nameToID = {};
+  let externalIDToID = {};
+  let ambiguousReferences = {};
+  let hasID = {};
 
-    let nodeData = [];
-    let nodeDataLookup = {};
-    for (const patientResource of patientResources){
-      const node = this.extractDataFromPatient(patientResource, containedResourcesLookup, twinTracker);
-      node.nodeId = nodeData.size();
-      nodeData.push(node);
-      nodeDataLookup['#' + node.properties.id] = node;
-    }
+  let nodeData = [];
+  let nodeDataLookup = {};
+  for (const patientResource of patientResources){
+    const node = this.extractDataFromPatient(patientResource, containedResourcesLookup, twinTracker);
+    node.nodeId = nodeData.size();
+    nodeData.push(node);
+    nodeDataLookup[this.getReference(node.properties.id)] = node;
+  }
 
-    for (const fmhResource of familyHistoryResources){
-      this.extractDataFromFMH(fmhResource, nodeDataLookup, containedResourcesLookup, twinTracker);
-    }
+  for (const fmhResource of familyHistoryResources){
+    this.extractDataFromFMH(fmhResource, nodeDataLookup, containedResourcesLookup, twinTracker);
+  }
 
-    for (const conditionResource of conditionResources){
-      this.extractDataFromCondition(conditionResource, nodeDataLookup, containedResourcesLookup, twinTracker);
-    }
+  for (const conditionResource of conditionResources){
+    this.extractDataFromCondition(conditionResource, nodeDataLookup, containedResourcesLookup, twinTracker);
+  }
 
-    for (const observationResource of observationResources){
-      this.extractDataFromObservation(observationResource, nodeDataLookup, containedResourcesLookup, twinTracker);
-    }
-
-
+  for (const observationResource of observationResources){
+    this.extractDataFromObservation(observationResource, nodeDataLookup, containedResourcesLookup, twinTracker);
+  }
 
 
-    // first pass: add all vertices and assign vertex IDs
-    for (const nextPerson of nodeData){
-      // add twin groups
-      if (nextPerson.nodeId in twinTracker.lookup){
-        nextPerson.properties.twinGroup = twinTracker.lookup[nextPerson.nodeId];
-      }
 
-      let pedigreeID = newG._addVertex(null, BaseGraph.TYPE.PERSON, nextPerson.properties,
-        newG.defaultPersonNodeWidth);
 
-      if (nextPerson.properties.id) {
-        if (externalIDToID.hasOwnProperty(nextPerson.properties.id)) {
-          throw 'Unable to import pedigree: multiple persons with the same ID ['
-          + nextPerson.properties.id + ']';
-        }
-        if (nameToID.hasOwnProperty(nextPerson.properties.id)
-          && nameToID[nextPerson.properties.id] !== pedigreeID) {
-          delete nameToID[nextPerson.properties.id];
-          ambiguousReferences[nextPerson.properties.id] = true;
-        } else {
-          externalIDToID[nextPerson.properties.id] = pedigreeID;
-          hasID[nextPerson.properties.id] = true;
-        }
-      }
-      if (nextPerson.properties.fName) {
-        if (nameToID.hasOwnProperty(nextPerson.properties.fName)
-          && nameToID[nextPerson.properties.fName] !== pedigreeID) {
-          // multiple nodes have this first name
-          delete nameToID[nextPerson.properties.fName];
-          ambiguousReferences[nextPerson.properties.fName] = true;
-        } else if (externalIDToID.hasOwnProperty(nextPerson.properties.fName)
-          && externalIDToID[nextPerson.properties.fName] !== pedigreeID) {
-          // some other node has this name as an ID
-          delete externalIDToID[nextPerson.properties.fName];
-          ambiguousReferences[nextPerson.properties.fName] = true;
-        } else {
-          nameToID[nextPerson.properties.fName] = pedigreeID;
-        }
-      }
-      // only use externalID if id is not present
-      if (nextPerson.properties.hasOwnProperty('externalId')
-        && !hasID.hasOwnProperty(pedigreeID)) {
-        externalIDToID[nextPerson.properties.externalId] = pedigreeID;
-        hasID[pedigreeID] = true;
-      }
-
+  // first pass: add all vertices and assign vertex IDs
+  for (const nextPerson of nodeData){
+    // add twin groups
+    if (nextPerson.nodeId in twinTracker.lookup){
+      nextPerson.properties.twinGroup = twinTracker.lookup[nextPerson.nodeId];
     }
 
-    let getPersonID = function (person) {
-      if (person.properties.hasOwnProperty('id')) {
-        return externalIDToID[person.properties.id];
+    let pedigreeID = newG._addVertex(null, BaseGraph.TYPE.PERSON, nextPerson.properties,
+      newG.defaultPersonNodeWidth);
+
+    if (nextPerson.properties.id) {
+      if (externalIDToID.hasOwnProperty(nextPerson.properties.id)) {
+        throw 'Unable to import pedigree: multiple persons with the same ID ['
+        + nextPerson.properties.id + ']';
       }
-
-      if (person.hasOwnProperty('fName')) {
-        return nameToID[person.properties.fName];
-      }
-    };
-
-    let findReferencedPerson = function (reference, refType) {
-      if (ambiguousReferences.hasOwnProperty(reference)) {
-        throw 'Unable to import pedigree: ambiguous reference to ['
-        + reference + ']';
-      }
-
-      if (externalIDToID.hasOwnProperty(reference)) {
-        return externalIDToID[reference];
-      }
-
-      if (nameToID.hasOwnProperty(reference)) {
-        return nameToID[reference];
-      }
-
-      throw 'Unable to import pedigree: ['
-      + reference
-      + '] is not a valid '
-      + refType
-      + ' reference (does not correspond to a name or an ID of another person)';
-    };
-
-    let defaultEdgeWeight = 1;
-
-    let relationshipTracker = new RelationshipTracker(newG,
-      defaultEdgeWeight);
-
-    // second pass (once all vertex IDs are known): process parents/children & add edges
-    for (let i = 0; i < nodeData.length; i++) {
-      let nextPerson = nodeData[i];
-
-      let personID = getPersonID(nextPerson);
-
-      let motherLink = nextPerson.hasOwnProperty('mother') ? nodeData[nextPerson['mother']].properties.id
-        : null;
-      let fatherLink = nextPerson.hasOwnProperty('father') ? nodeData[nextPerson['father']].properties.id
-        : null;
-
-      if (motherLink == null && fatherLink == null) {
-        continue;
-      }
-
-      // create a virtual parent in case one of the parents is missing
-      let fatherID = null;
-      let motherID = null;
-      if (fatherLink == null) {
-        fatherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
-          'gender': 'M',
-          'comments': 'unknown'
-        }, newG.defaultPersonNodeWidth);
+      if (nameToID.hasOwnProperty(nextPerson.properties.id)
+        && nameToID[nextPerson.properties.id] !== pedigreeID) {
+        delete nameToID[nextPerson.properties.id];
+        ambiguousReferences[nextPerson.properties.id] = true;
       } else {
-        fatherID = findReferencedPerson(fatherLink, 'father');
-        if (newG.properties[fatherID].gender === 'F') {
-          throw 'Unable to import pedigree: a person declared as female is also declared as being a father ('
-          + fatherLink + ')';
-        }
+        externalIDToID[nextPerson.properties.id] = pedigreeID;
+        hasID[nextPerson.properties.id] = true;
       }
-      if (motherLink == null) {
-        motherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
-          'gender': 'F',
-          'comments': 'unknown'
-        }, newG.defaultPersonNodeWidth);
+    }
+    if (nextPerson.properties.fName) {
+      if (nameToID.hasOwnProperty(nextPerson.properties.fName)
+        && nameToID[nextPerson.properties.fName] !== pedigreeID) {
+        // multiple nodes have this first name
+        delete nameToID[nextPerson.properties.fName];
+        ambiguousReferences[nextPerson.properties.fName] = true;
+      } else if (externalIDToID.hasOwnProperty(nextPerson.properties.fName)
+        && externalIDToID[nextPerson.properties.fName] !== pedigreeID) {
+        // some other node has this name as an ID
+        delete externalIDToID[nextPerson.properties.fName];
+        ambiguousReferences[nextPerson.properties.fName] = true;
       } else {
-        motherID = findReferencedPerson(motherLink, 'mother');
-        if (newG.properties[motherID].gender === 'M') {
-          throw 'Unable to import pedigree: a person declared as male is also declared as being a mother ('
-          + motherLink + ')';
-        }
+        nameToID[nextPerson.properties.fName] = pedigreeID;
       }
-
-      if (fatherID === personID || motherID === personID) {
-        throw 'Unable to import pedigree: a person is declared to be his or hew own parent';
-      }
-
-      // both motherID and fatherID are now given and represent valid existing nodes in the pedigree
-
-      // if there is a relationship between motherID and fatherID the corresponding childhub is returned
-      // if there is no relationship, a new one is created together with the chldhub
-      let chhubID = relationshipTracker.createOrGetChildhub(motherID,
-        fatherID);
-
-      newG.addEdge(chhubID, personID, defaultEdgeWeight);
+    }
+    // only use externalID if id is not present
+    if (nextPerson.properties.hasOwnProperty('externalId')
+      && !hasID.hasOwnProperty(pedigreeID)) {
+      externalIDToID[nextPerson.properties.externalId] = pedigreeID;
+      hasID[pedigreeID] = true;
     }
 
-    newG.validate();
+  }
 
-    // set any
-    for (const nextPerson of nodeData){
-      if (nextPerson.cpartners){
-        let nextPersonId = undefined;
-        for (const partner of nextPerson.cpartners){
-          if (partner < nextPerson.nodeId){
-            continue; // should have already been processed.
-          }
-          if (nextPersonId === undefined){
-            nextPersonId = findReferencedPerson(nextPerson.properties.id, 'cpartner');
-          }
-          const partnerId = findReferencedPerson(nodeData[partner].properties.id, 'cpartner');
-          let relNode = newG.getRelationshipNode(nextPersonId, partnerId);
-          if (relNode){
-            let relProperties = newG.properties[relNode];
-            if (relProperties['consangr'] !== 'Y'){
-              relProperties['consangr'] = 'Y';
-              // check if we can make it 'A'
-              let nextGreatGrandParents = newG.getParentGenerations(nextPersonId, 3);
-              let partnerGreatGrandParents = newG.getParentGenerations(partnerId, 3);
-              for (let elem of nextGreatGrandParents) {
-                if (partnerGreatGrandParents.has(elem)) {
-                  // found common
-                  relProperties['consangr'] = 'A';
-                  break;
-                }
+  let getPersonID = function (person) {
+    if (person.properties.hasOwnProperty('id')) {
+      return externalIDToID[person.properties.id];
+    }
+
+    if (person.hasOwnProperty('fName')) {
+      return nameToID[person.properties.fName];
+    }
+  };
+
+  let findReferencedPerson = function (reference, refType) {
+    if (ambiguousReferences.hasOwnProperty(reference)) {
+      throw 'Unable to import pedigree: ambiguous reference to ['
+      + reference + ']';
+    }
+
+    if (externalIDToID.hasOwnProperty(reference)) {
+      return externalIDToID[reference];
+    }
+
+    if (nameToID.hasOwnProperty(reference)) {
+      return nameToID[reference];
+    }
+
+    throw 'Unable to import pedigree: ['
+    + reference
+    + '] is not a valid '
+    + refType
+    + ' reference (does not correspond to a name or an ID of another person)';
+  };
+
+  let defaultEdgeWeight = 1;
+
+  let relationshipTracker = new RelationshipTracker(newG,
+    defaultEdgeWeight);
+
+  // second pass (once all vertex IDs are known): process parents/children & add edges
+  for (let i = 0; i < nodeData.length; i++) {
+    let nextPerson = nodeData[i];
+
+    let personID = getPersonID(nextPerson);
+
+    let motherLink = nextPerson.hasOwnProperty('mother') ? nodeData[nextPerson['mother']].properties.id
+      : null;
+    let fatherLink = nextPerson.hasOwnProperty('father') ? nodeData[nextPerson['father']].properties.id
+      : null;
+
+    if (motherLink == null && fatherLink == null) {
+      continue;
+    }
+
+    // create a virtual parent in case one of the parents is missing
+    let fatherID = null;
+    let motherID = null;
+    if (fatherLink == null) {
+      fatherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
+        'gender': 'M',
+        'comments': 'unknown'
+      }, newG.defaultPersonNodeWidth);
+    } else {
+      fatherID = findReferencedPerson(fatherLink, 'father');
+      if (newG.properties[fatherID].gender === 'F') {
+        throw 'Unable to import pedigree: a person declared as female is also declared as being a father ('
+        + fatherLink + ')';
+      }
+    }
+    if (motherLink == null) {
+      motherID = newG._addVertex(null, BaseGraph.TYPE.PERSON, {
+        'gender': 'F',
+        'comments': 'unknown'
+      }, newG.defaultPersonNodeWidth);
+    } else {
+      motherID = findReferencedPerson(motherLink, 'mother');
+      if (newG.properties[motherID].gender === 'M') {
+        throw 'Unable to import pedigree: a person declared as male is also declared as being a mother ('
+        + motherLink + ')';
+      }
+    }
+
+    if (fatherID === personID || motherID === personID) {
+      throw 'Unable to import pedigree: a person is declared to be his or hew own parent';
+    }
+
+    // both motherID and fatherID are now given and represent valid existing nodes in the pedigree
+
+    // if there is a relationship between motherID and fatherID the corresponding childhub is returned
+    // if there is no relationship, a new one is created together with the chldhub
+    let chhubID = relationshipTracker.createOrGetChildhub(motherID,
+      fatherID);
+
+    newG.addEdge(chhubID, personID, defaultEdgeWeight);
+  }
+
+  newG.validate();
+
+  // set any
+  for (const nextPerson of nodeData){
+    if (nextPerson.cpartners){
+      let nextPersonId = undefined;
+      for (const partner of nextPerson.cpartners){
+        if (partner < nextPerson.nodeId){
+          continue; // should have already been processed.
+        }
+        if (nextPersonId === undefined){
+          nextPersonId = findReferencedPerson(nextPerson.properties.id, 'cpartner');
+        }
+        const partnerId = findReferencedPerson(nodeData[partner].properties.id, 'cpartner');
+        let relNode = newG.getRelationshipNode(nextPersonId, partnerId);
+        if (relNode){
+          let relProperties = newG.properties[relNode];
+          if (relProperties['consangr'] !== 'Y'){
+            relProperties['consangr'] = 'Y';
+            // check if we can make it 'A'
+            let nextGreatGrandParents = newG.getParentGenerations(nextPersonId, 3);
+            let partnerGreatGrandParents = newG.getParentGenerations(partnerId, 3);
+            for (let elem of nextGreatGrandParents) {
+              if (partnerGreatGrandParents.has(elem)) {
+                // found common
+                relProperties['consangr'] = 'A';
+                break;
               }
             }
           }
         }
       }
     }
-    // PedigreeImport.validateBaseGraph(newG);
-
-    return newG;
-  } else {
-
-    throw 'Unable to import pedigree: input is not a resource type we understand';
   }
+  // PedigreeImport.validateBaseGraph(newG);
+  return newG;
 
 };
 
@@ -420,13 +452,16 @@ GA4GHFHIRConverter.extractDataFromFMH = function (familyHistoryResource,
 }
 
 GA4GHFHIRConverter.extractDataFromCondition = function (conditionResource, nodeDataLookup, containedResourcesLookup, twinTracker) {
-  if (!conditionResource.subject || !(conditionResource.subject in nodeDataLookup) || !conditionResource.code){
+  if (!conditionResource.subject || !(conditionResource.subject.reference in nodeDataLookup) || !conditionResource.code){
     // condition doesn't link to a subject in our list or has no code
     return;
   }
 
-  let familyMember = conditionResource.subject;
+  let familyMember = conditionResource.subject.reference;
 
+  if (!(familyMember in nodeDataLookup)){
+    console.log('Failed to find node for ' + familyMember);
+  }
   let nodeData = nodeDataLookup[familyMember];
 
   let disorderSystem = TerminologyManager.getCodeSystem(DisorderTermType);
@@ -452,6 +487,8 @@ GA4GHFHIRConverter.extractDataFromCondition = function (conditionResource, nodeD
     else {
       nodeData.properties.disorders = [conditionToAdd];
     }
+  } else {
+    console.log("No disorder found in ", conditionResource.code);
   }
 
 
@@ -459,12 +496,12 @@ GA4GHFHIRConverter.extractDataFromCondition = function (conditionResource, nodeD
 
 GA4GHFHIRConverter.extractDataFromObservation = function (observationResource, nodeDataLookup, containedResourcesLookup, twinTracker) {
 
-  if (!observationResource.subject || !(observationResource.subject in nodeDataLookup)){
+  if (!observationResource.subject || !(observationResource.subject.reference in nodeDataLookup)){
     // observation doesn't link to a subject in our list or has no code
     return;
   }
 
-  let familyMember = observationResource.subject;
+  let familyMember = observationResource.subject.reference;
 
   let nodeData = nodeDataLookup[familyMember];
 
@@ -523,6 +560,24 @@ GA4GHFHIRConverter.extractDataFromObservation = function (observationResource, n
         if (coding.system === 'http://snomed.info/sct' && coding.code === '224118004'
           && observationResource.valueInteger === 0) {
           nodeData.properties['childlessStatus'] = 'childless';
+          foundCode = true;
+          break;
+        }
+        if (coding.system === 'http://loinc.org' && coding.code === '48767-8'
+          && observationResource.valueString) {
+          nodeData.properties['comments'] = observationResource.valueString;
+          foundCode = true;
+          break;
+        }
+        if (coding.system === 'http://snomed.info/sct' && coding.code === '441879005'
+          && 'Lost contact with proband' === observationResource.valueString) {
+          nodeData.properties['lostContact'] = true;
+          foundCode = true;
+          break;
+        }
+        if (coding.system === 'http://loinc.org' && coding.code === '96172-2'
+          && observationResource.valueBoolean) {
+          nodeData.properties['evaluated'] = true;
           foundCode = true;
           break;
         }
@@ -1200,7 +1255,7 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
     'code': {
       'coding': [
         {
-          'system': ' http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
+          'system': 'http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
           'code': 'proband'
         }
       ]
@@ -1211,12 +1266,12 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
   };
 
   let reasonSection = {
-    'title': 'Reason collected',
+    'title': 'Reason',
     'code': {
       'coding': [
         {
-          'system': ' http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
-          'code': 'reasonCollected'
+          'system': 'http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
+          'code': 'reason'
         }
       ]
     },
@@ -1225,7 +1280,7 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
   for (let probandCond of conditions[probandRef]) {
     reasonSection.entry.push({
       'type': 'Condition',
-      'reference': '#' + probandCond.id
+      'reference': this.getReference(probandCond.id)
     });
   }
 
@@ -1234,13 +1289,25 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
     'code': {
       'coding': [
         {
-          'system': ' http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
+          'system': 'http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
           'code': 'individuals'
         }
       ]
     },
     'entry': []
   };
+
+  let author = {
+    "resourceType": "Organization",
+    "id": generateUUID(),
+    "name": "open-pedigree unknown author"
+  };
+
+  let authorRef = {
+    'type': 'Organization',
+    'reference': this.getReference(author.id)
+  };
+  containedResources.push(author);
 
   for (let pi in pedigreeIndividuals) {
     containedResources.push(pedigreeIndividuals[pi]);
@@ -1255,7 +1322,7 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
     'code': {
       'coding': [
         {
-          'system': ' http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
+          'system': 'http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
           'code': 'relationships'
         }
       ]
@@ -1266,7 +1333,7 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
     containedResources.push(pr);
     relationshipSection.entry.push({
       'type': 'FamilyMemberHistory',
-      'reference': '#' + pr.id
+      'reference': this.getReference(pr.id)
     });
   }
 
@@ -1275,7 +1342,7 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
     'code': {
       'coding': [
         {
-          'system': ' http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
+          'system': 'http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
           'code': 'other'
         }
       ]
@@ -1288,7 +1355,7 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
       containedResources.push(con);
       otherSection.entry.push({
         'type': 'Condition',
-        'reference': '#' + con.id
+        'reference': this.getReference(con.id)
       });
     }
   }
@@ -1297,12 +1364,13 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
       containedResources.push(ob);
       otherSection.entry.push({
         'type': 'Observation',
-        'reference': '#' + ob.id
+        'reference': this.getReference(ob.id)
       });
     }
   }
   let composition = {
     'resourceType': 'Composition',
+    'id': generateUUID(),
     'meta': {
       'profile': [
         'http://purl.org/ga4gh/pedigree-fhir-ig/StructureDefinition/Pedigree'
@@ -1319,36 +1387,21 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
     },
     'subject': probandReference,
     'date': dateTime,
+    'author': authorRef,
     'title': 'Pedigree',
     'section': [
       probrandSection,
       reasonSection,
       individualsSection,
       relationshipSection,
-      otherSection],
-    'contained': containedResources
+      otherSection]
   };
 
 
   if (pedigreeImage) {
 
-    composition.section.push({
-      'title': 'Pedigree Diagram',
-      'code': {
-        'coding': [
-          {
-            'system': ' http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
-            'code': 'pedigreeImage'
-          }
-        ]
-      },
-      'entry': [{
-        'type': 'DocumentReference',
-        'reference': '#pedigreeImage'
-      }]
-    });
     let pedigreeImageDocumentReference = {
-      'id': 'pedigreeImage',
+      'id': generateUUID(),
       'resourceType': 'DocumentReference',
       'status': 'current',
       'docStatus': 'preliminary',
@@ -1361,11 +1414,40 @@ GA4GHFHIRConverter.exportAsFHIR = function (pedigree, privacySetting, knownFhirP
         }
       }
     };
+    composition.section.push({
+      'title': 'Pedigree Diagram',
+      'code': {
+        'coding': [
+          {
+            'system': 'http://purl.org/ga4gh/pedigree-fhir-ig/CodeSystem/SectionType',
+            'code': 'pedigreeImage'
+          }
+        ]
+      },
+      'entry': [{
+        'type': 'DocumentReference',
+        'reference': this.getReference(pedigreeImageDocumentReference.id)
+      }]
+    });
     containedResources.push(pedigreeImageDocumentReference);
   }
 
+  let bundleEntries = containedResources.map(resource => ({'fullUrl': resource.id, 'resource': resource}) );
+  let bundleLinks = containedResources.map(resource => ({'relation': 'item', 'url': resource.id}) );
 
-  return JSON.stringify(composition, null, 2);
+  let bundle = {
+    'resourceType': 'Bundle',
+    'identifier': {
+      'system': 'http://purl.org/ga4gh/pedigree-fhir-ig',
+      'value': generateUUID()
+    },
+    'type': 'document',
+    'timestamp': dateTime,
+    'entry': [{'link': bundleLinks, 'fullUrl': composition.id, 'resource': composition}, ...bundleEntries]
+  };
+
+
+  return JSON.stringify(bundle, null, 2);
 };
 
 
@@ -1447,7 +1529,7 @@ GA4GHFHIRConverter.processTreeNode = function (index, pedigree, privacySetting, 
 
   const nodeProperties = pedigree.GG.properties[index];
   const externalId = nodeProperties['externalID'];
-  let ref = (knownFhirPatienReference && externalId && knownFhirPatienReference[externalId]) ? knownFhirPatienReference[externalId] : 'PI_' + index;
+  let ref = (knownFhirPatienReference && externalId && knownFhirPatienReference[externalId]) ? knownFhirPatienReference[externalId] : generateUUID();
   nodeIndexToRef[index] = ref;
   pedigreeIndividuals[index] = this.buildPedigreeIndividual(ref, nodeProperties, privacySetting);
 
@@ -1552,6 +1634,13 @@ GA4GHFHIRConverter.processTreeNode = function (index, pedigree, privacySetting, 
   return ref;
 };
 
+GA4GHFHIRConverter.getReference = function(id) {
+  if (id.startsWith('urn:uuid:')){
+    return id;
+  }
+  return '#' + id;
+}
+
 GA4GHFHIRConverter.patRefAsId = function (ref) {
   if (ref.startsWith('Patient/')) {
     return ref.substring(8);
@@ -1563,7 +1652,7 @@ GA4GHFHIRConverter.patRefAsRef = function (ref) {
   if (ref.startsWith('Patient/')) {
     return ref;
   }
-  return '#' + ref;
+  return this.getReference(ref);
 };
 
 
@@ -1674,10 +1763,10 @@ GA4GHFHIRConverter.buildPedigreeIndividual = function (containedId, nodeProperti
 GA4GHFHIRConverter.buildPedigreeRelation = function (ref, relRef, relationship) {
   return {
     'resourceType': 'FamilyMemberHistory',
-    'id': this.patRefAsId(ref) + '_' + this.patRefAsId(relRef) + '_Relationship',
+    'id': generateUUID(),
     'meta': {
       'profile': [
-        ' http://purl.org/ga4gh/pedigree-fhir-ig/StructureDefinition/PedigreeRelationship'
+        'http://purl.org/ga4gh/pedigree-fhir-ig/StructureDefinition/PedigreeRelationship'
       ]
     },
     'extension': [
@@ -1711,8 +1800,10 @@ GA4GHFHIRConverter.addConditions = function (nodeProperties, ref, condtions) {
       let disorderTerm = disorderLegend.getTerm(disorders[i]);
       let fhirCondition = {
         'resourceType': 'Condition',
-        'id': this.patRefAsId(ref) + '_cond_' + i,
-        'subject': this.patRefAsRef(ref)
+        'id': generateUUID(),
+        'subject': {
+          'reference': this.patRefAsRef(ref)
+        },
       };
       if (disorderTerm.getName() === disorders[i]) {
         // name and ID the same, must not be from omim
@@ -1749,9 +1840,9 @@ GA4GHFHIRConverter.addObservations = function (nodeProperties, ref, observations
     for (let j = 0; j < hpoTerms.length; j++) {
       let fhirObservation = {
         'resourceType': 'Observation',
-        'id': this.patRefAsId(ref) + '_clinical_' + j,
+        'id': generateUUID(),
         'status': 'preliminary',
-        'subject': this.patRefAsRef(ref)
+        'subject': { 'reference': this.patRefAsRef(ref) }
       };
       let hpoTerm = hpoLegend.getTerm(hpoTerms[j]);
       if (hpoTerm.getName() === hpoTerms[j]) {
@@ -1778,9 +1869,9 @@ GA4GHFHIRConverter.addObservations = function (nodeProperties, ref, observations
       // @TODO change to use http://build.fhir.org/ig/HL7/genomics-reporting/obs-region-studied.html
       let fhirObservation = {
         'resourceType': 'Observation',
-        'id': this.patRefAsId(ref) + '_gene_' + j,
+        'id': generateUUID(),
         'status': 'preliminary',
-        'subject': this.patRefAsRef(ref)
+        'subject': { 'reference': this.patRefAsRef(ref)}
       };
       let geneTerm = geneLegend.getTerm(candidateGenes[j]);
       if (geneTerm.getName() === candidateGenes[j]) {
@@ -1828,10 +1919,10 @@ GA4GHFHIRConverter.addObservations = function (nodeProperties, ref, observations
     if (carrierCode) {
       let fhirObservation = {
         'resourceType': 'Observation',
-        'id': this.patRefAsId(ref) + '_carrierStatus',
+        'id': generateUUID(),
         'status': 'preliminary',
         'valueCodeableConcept': carrierCode,
-        'subject': this.patRefAsRef(ref)
+        'subject': { 'reference': this.patRefAsRef(ref) }
       };
       observationsForRef.push(fhirObservation);
     }
@@ -1867,10 +1958,10 @@ GA4GHFHIRConverter.addObservations = function (nodeProperties, ref, observations
     if (childlessCode) {
       let fhirObservation = {
         'resourceType': 'Observation',
-        'id': this.patRefAsId(ref) + '_childlessStatus',
+        'id': generateUUID(),
         'status': 'preliminary',
         'code': childlessCode,
-        'subject': this.patRefAsRef(ref)
+        'subject': { 'reference': this.patRefAsRef(ref) }
       };
       if (addZeroValue){
         fhirObservation.valueInteger = 0;
@@ -1878,6 +1969,62 @@ GA4GHFHIRConverter.addObservations = function (nodeProperties, ref, observations
       observationsForRef.push(fhirObservation);
     }
   }
+  // add comments as an observation
+  if (nodeProperties['comments']) {
+    let fhirObservation = {
+      'resourceType': 'Observation',
+      'id': generateUUID(),
+      'status': 'preliminary',
+      'code': {
+        'coding': [{
+          'system': 'http://loinc.org',
+          'code': '48767-8',
+          'display': 'Annotation comment [Interpretation] Narrative'
+        }]
+      },
+      'subject': { 'reference': this.patRefAsRef(ref) },
+      'valueString': nodeProperties['comments']
+    };
+    observationsForRef.push(fhirObservation);
+  }
+
+  // add lost contact as an observation
+  if (nodeProperties['lostContact']) {
+    let fhirObservation = {
+      'resourceType': 'Observation',
+      'id': generateUUID(),
+      'status': 'preliminary',
+      'code': {
+        'coding': [{
+          'system': 'http://snomed.info/sct',
+          'code': '441879005',
+          'display': 'No contact with family'
+        }]
+      },
+      'subject': { 'reference': this.patRefAsRef(ref) },
+      'valueString': 'Lost contact with proband'
+    };
+    observationsForRef.push(fhirObservation);
+  }
+  // add evaluated as an observation
+  if (nodeProperties['evaluated']) {
+    let fhirObservation = {
+      'resourceType': 'Observation',
+      'id': generateUUID(),
+      'status': 'preliminary',
+      'code': {
+        'coding': [{
+          'system': 'http://loinc.org',
+          'code': '96172-2',
+          'display': 'Clinical genetics Evaluation note'
+        }]
+      },
+      'subject': { 'reference': this.patRefAsRef(ref) },
+      'valueBoolean': true
+    };
+    observationsForRef.push(fhirObservation);
+  }
+
   observations[ref] = observationsForRef;
 };
 //===============================================================================================
