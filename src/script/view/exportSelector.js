@@ -57,8 +57,16 @@ var ExportSelector = Class.create( {
       return optionWrapper;
     };
 
-
-
+    var _addConfigCheckboxOption = function (checked, name, cssClass, labelText, value) {
+      var optionWrapper = new Element('tr');
+      var input = new Element('input', {'type' : 'checkbox', 'value': value, 'name': name, 'id': name + '_checkbox' });
+      if (checked) {
+        input.checked = true;
+      }
+      var label = new Element('label', {'class': cssClass}).insert(input).insert(labelText);
+      optionWrapper.insert(label.wrap('td'));
+      return optionWrapper;
+    };
 
     var configListElementPED = new Element('table', {'id': 'pedOptions'});
     var label = new Element('label', {'class': 'export-config-header'}).insert('Which of the following fields should be used to generate person IDs?');
@@ -73,6 +81,11 @@ var ExportSelector = Class.create( {
     configListElementPrivacy.insert(_addConfigOption(true,  'privacy-options', 'export-subconfig-label', 'All data', 'all'));
     configListElementPrivacy.insert(_addConfigOption(false, 'privacy-options', 'export-subconfig-label', 'Remove personal information (name and age)', 'nopersonal'));
     configListElementPrivacy.insert(_addConfigOption(false, 'privacy-options', 'export-subconfig-label', 'Remove personal information and free-form comments', 'minimal'));
+
+    var configListElementFhir = new Element('table', {'id': 'fhirOptions', 'style': 'display:none'});
+    var fhirLabel = new Element('label', {'class': 'export-config-header'}).insert('FHIR export options:');
+    configListElementFhir.insert(fhirLabel.wrap('td').wrap('tr'));
+    configListElementFhir.insert(_addConfigCheckboxOption(true,  'fhir-include-svg', 'export-subconfig-label', 'Include SVG', '1'));
 
     var _addSelectOption = function (name, cssClass, labelText, options) {
       var optionWrapper = new Element('tr');
@@ -114,7 +127,7 @@ var ExportSelector = Class.create( {
 
 
     var promptConfig = new Element('div', {'class': 'import-section'}).update('Options:');
-    var configSection = new Element('div', {'class': 'import-config'}).insert(configListElementPED).insert(configListElementPrivacy).insert(configListElementPDF);
+    var configSection = new Element('div', {'class': 'import-config'}).insert(configListElementPED).insert(configListElementPrivacy).insert(configListElementFhir).insert(configListElementPDF);
     var dataSection3 = new Element('div', {'class': 'import-block'});
     dataSection3.insert(promptConfig).insert(configSection);
     mainDiv.insert(dataSection3);
@@ -145,6 +158,7 @@ var ExportSelector = Class.create( {
 
     var pedOptionsTable = $('pedOptions');
     var privacyOptionsTable = $('privacyOptions');
+    var fhirOptionsTable = $('fhirOptions');
     var pdfOptionsTable = $('pdfOptions');
 
     if (exportType == 'ped') {
@@ -153,6 +167,11 @@ var ExportSelector = Class.create( {
     } else {
       pedOptionsTable.hide();
       privacyOptionsTable.show();
+    }
+    if (exportType === 'fhir' || exportType === 'GA4GH') {
+      fhirOptionsTable.show();
+    } else {
+      fhirOptionsTable.hide();
     }
     if (exportType == 'pdf') {
       pdfOptionsTable.show();
@@ -181,13 +200,17 @@ var ExportSelector = Class.create( {
       saveTextAs(exportString, fileName);
     } else {
       var privacySetting = $$('input:checked[type=radio][name="privacy-options"]')[0].value;
+      var includeSVG = $('fhir-include-svg_checkbox').checked;
+
       if (exportType == 'fhir') {
-        var exportString = PedigreeExport.exportAsFHIR(editor.getGraph().DG, privacySetting);
+        var svg = includeSVG ? PedigreeExport.exportAsSVG(editor.getGraph().DG, privacySetting) : null;
+        var exportString = PedigreeExport.exportAsFHIR(editor.getGraph().DG, privacySetting, null, svg);
         var fileName = 'open-pedigree-fhir.json';
         var mimeType = 'application/fhir+json';
         saveTextAs(exportString, fileName);
       } else if (exportType == 'GA4GH') {
-        var exportString = PedigreeExport.exportAsGA4GH(editor.getGraph().DG, privacySetting);
+        var svg = includeSVG ? PedigreeExport.exportAsSVG(editor.getGraph().DG, privacySetting) : null;
+        var exportString = PedigreeExport.exportAsGA4GH(editor.getGraph().DG, privacySetting, null, svg);
         var fileName = 'open-pedigree-GA4GH-fhir.json';
         var mimeType = 'application/fhir+json';
         saveTextAs(exportString, fileName);
