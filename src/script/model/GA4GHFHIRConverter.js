@@ -281,33 +281,46 @@ GA4GHFHIRConverter.initFromFHIR = function (inputText) {
 
   newG.validate();
 
-  // set any
+  // set any partner relationships
   for (const nextPerson of nodeData){
-    if (nextPerson.cpartners){
+    if (nextPerson.partners){
       let nextPersonId = undefined;
-      for (const partner of nextPerson.cpartners){
+      for (let i=0; i < nextPerson.partners.length; i++){
+        const partner = nextPerson.partners[i];
         if (partner < nextPerson.nodeId){
           continue; // should have already been processed.
         }
-        if (nextPersonId === undefined){
-          nextPersonId = findReferencedPerson(nextPerson.properties.id, 'cpartner');
+
+        const partnerType = nextPerson.partnerType[i];
+        if (!partnerType.consangr && !partnerType.broken){
+          // nothing to set
+          continue;
         }
-        const partnerId = findReferencedPerson(nodeData[partner].properties.id, 'cpartner');
+
+        if (nextPersonId === undefined){
+          nextPersonId = findReferencedPerson(nextPerson.properties.id, 'partner');
+        }
+        const partnerId = findReferencedPerson(nodeData[partner].properties.id, 'partner');
         let relNode = newG.getRelationshipNode(nextPersonId, partnerId);
         if (relNode){
           let relProperties = newG.properties[relNode];
-          if (relProperties['consangr'] !== 'Y'){
-            relProperties['consangr'] = 'Y';
-            // check if we can make it 'A'
-            let nextGreatGrandParents = newG.getParentGenerations(nextPersonId, 3);
-            let partnerGreatGrandParents = newG.getParentGenerations(partnerId, 3);
-            for (let elem of nextGreatGrandParents) {
-              if (partnerGreatGrandParents.has(elem)) {
-                // found common
-                relProperties['consangr'] = 'A';
-                break;
+          if (partnerType.consangr){
+            if (relProperties['consangr'] !== 'Y'){
+              relProperties['consangr'] = 'Y';
+              // check if we can make it 'A'
+              let nextGreatGrandParents = newG.getParentGenerations(nextPersonId, 3);
+              let partnerGreatGrandParents = newG.getParentGenerations(partnerId, 3);
+              for (let elem of nextGreatGrandParents) {
+                if (partnerGreatGrandParents.has(elem)) {
+                  // found common
+                  relProperties['consangr'] = 'A';
+                  break;
+                }
               }
             }
+          }
+          if (partnerType.broken){
+            relProperties['broken'] = true;
           }
         }
       }
@@ -385,34 +398,25 @@ GA4GHFHIRConverter.extractDataFromFMH = function (familyHistoryResource,
       firstNodeData.mother = secondNodeData.nodeId;
     }
   }
-  else if (rel === 'KIN:026'){
+  else if (rel === 'KIN:026' || rel === 'KIN:030' || rel === 'KIN:047'  || rel === 'KIN:048'){
     // SIGOTHR
+    let isConsang = (rel == 'KIN:030' || rel === 'KIN:048');
+    let isBroken = (rel == 'KIN:047' || rel === 'KIN:048');
     if ('partners' in firstNodeData){
       firstNodeData.partners.push(secondNodeData.nodeId);
+      firstNodeData.partnerType.push({consangr: isConsang, broken: isBroken});
     }
     else {
       firstNodeData.partners = [secondNodeData.nodeId];
+      firstNodeData.partnerType = [{consangr: isConsang, broken: isBroken}];
     }
     if ('partners' in secondNodeData){
       secondNodeData.partners.push(firstNodeData.nodeId);
+      secondNodeData.partnerType.push({consangr: isConsang, broken: isBroken});
     }
     else {
       secondNodeData.partners = [firstNodeData.nodeId];
-    }
-  }
-  else if (rel === 'KIN:030'){
-    // CONSANG
-    if ('cpartners' in firstNodeData){
-      firstNodeData.cpartners.push(secondNodeData.nodeId);
-    }
-    else {
-      firstNodeData.cpartners = [secondNodeData.nodeId];
-    }
-    if ('cpartners' in secondNodeData){
-      secondNodeData.cpartners.push(firstNodeData.nodeId);
-    }
-    else {
-      secondNodeData.cpartners = [firstNodeData.nodeId];
+      secondNodeData.partnerType = [{consangr: isConsang, broken: isBroken}];
     }
   }
   else if (rel === 'KIN:009' || rel === 'KIN:010' || rel === 'KIN:011'){
@@ -1499,6 +1503,8 @@ GA4GHFHIRConverter.familyHistoryLookup = {
   'KIN:044': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:044', 'display': 'hasSpermDonor' },
   'KIN:045': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:045', 'display': 'hasGreatGrandParent' },
   'KIN:046': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:046', 'display': 'hasParentalSibling' },
+  'KIN:047': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:047', 'display': 'isBrokenPartner' },
+  'KIN:048': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:048', 'display': 'isBrokenConsanguineousPartner' },
 
 };
 
@@ -1511,7 +1517,9 @@ GA4GHFHIRConverter.relationshipMap = {
   'ADOPTFTH':  'KIN:022',
   'ADOPTPRN':  'KIN:022',
   'SIGOTHR':   'KIN:026',
+  'BROKEN_SIGOTHR':   'KIN:047',
   'CONSANG':   'KIN:030',
+  'BROKEN_CONSANG':   'KIN:048',
   'TWIN':      'KIN:009',
   'TWINSIS':   'KIN:010',
   'TWINBRO':   'KIN:010',
@@ -1582,6 +1590,8 @@ GA4GHFHIRConverter.processTreeNode = function (index, pedigree, privacySetting, 
 
       if (relNode != null) {
         let relProperties = pedigree.GG.properties[relNode];
+        console.log('relProperties', relProperties);
+
         let consangr = relProperties['consangr'] ? relProperties['consangr'] : 'A';
         if (consangr === 'Y'){
           relationshipsToBuild[partners[i]] = 'CONSANG';
@@ -1598,6 +1608,9 @@ GA4GHFHIRConverter.processTreeNode = function (index, pedigree, privacySetting, 
               break;
             }
           }
+        }
+        if (relProperties['broken']){
+          relationshipsToBuild[partners[i]] = 'BROKEN_' + relationshipsToBuild[partners[i]];
         }
       }
 
