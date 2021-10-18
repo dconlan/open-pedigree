@@ -214,10 +214,13 @@ var SaveLoadEngine = Class.create( {
         }
 
         jsonData = null;
-        if (format === 'fhir'){
+        if (format === 'fhir_v1'){
           // var patientFhirRef = (this._context) ? this._context.patientFhirRef : null;
           var patientFhirRef = null;
           jsonData = PedigreeExport.exportAsFHIR(editor.getGraph().DG, 'all', patientFhirRef, pedigreeImage);
+        } else if (format === 'fhir' || format === 'GA4GH'){
+          var patientFhirRef = null;
+          jsonData = PedigreeExport.exportAsGA4GH(editor.getGraph().DG, 'all', patientFhirRef, pedigreeImage);
         }
         // else if (this._saveAs === "simpleJSON"){
         //   jsonData = PedigreeExport.exportAsSimpleJSON(editor.getGraph().DG, "all");;

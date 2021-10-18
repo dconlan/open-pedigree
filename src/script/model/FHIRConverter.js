@@ -223,7 +223,7 @@ FHIRConverter.initFromFHIR = function(inputText) {
 
     for (const nextPerson of nodeData){
       if (nextPerson.partners){
-        let nextPersonId = getPersonID(nextPerson);;
+        let nextPersonId = getPersonID(nextPerson);
         for (let i=0; i < nextPerson.partners.length; i++){
           const partnerId = findReferencedPerson(nextPerson.partners[i].ref, 'partner');
           if (partnerId < nextPerson.nodeId){
@@ -581,8 +581,8 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
             for (let k = 0; k < codings.length; k++) {
               if (codings[k].system === 'http://purl.org/ga4gh/kin.fhir') {
                 let code = codings[k].code;
-                let isConsang = (code === 'KIN:030' || code === 'KIN:048');
-                let isBroken = (code === 'KIN:047' || code === 'KIN:048');
+                let isConsang = (code === 'KIN:030' || code === 'KIN:049');
+                let isBroken = (code === 'KIN:048' || code === 'KIN:049');
                 type = {consangr: isConsang, broken: isBroken};
                 break;
               }
@@ -2279,8 +2279,8 @@ FHIRConverter.buildGeneticsParentExtension = function(index, relationship) {
 FHIRConverter.partnerTypeLookup = {
   'SIGOTHR': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:026', 'display': 'isPartner' },
   'CONSANG': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:030', 'display': 'isConsanguineousPartner' },
-  'BROKEN_SIGOTHR': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:047', 'display': 'isBrokenPartner' },
-  'BROKEN_CONSANG': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:048', 'display': 'isBrokenConsanguineousPartner' },
+  'BROKEN_SIGOTHR': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:048', 'display': 'isBrokenPartner' },
+  'BROKEN_CONSANG': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:049', 'display': 'isBrokenConsanguineousPartner' },
 }
 
 FHIRConverter.buildGeneticsPartnerExtension = function(index, relationship) {

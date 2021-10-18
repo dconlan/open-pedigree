@@ -33,7 +33,7 @@ var ExportSelector = Class.create( {
 
     var typeListElement = new Element('table');
     typeListElement.insert(_addTypeOption(true,  'PED', 'ped'));
-    typeListElement.insert(_addTypeOption(false,  'FHIR', 'fhir'));
+    typeListElement.insert(_addTypeOption(false,  'Legacy FHIR', 'fhir_v1'));
     typeListElement.insert(_addTypeOption(false,  'GA4GH FHIR', 'GA4GH'));
     typeListElement.insert(_addTypeOption(false,  'SVG', 'svg'));
     typeListElement.insert(_addTypeOption(false,  'PDF', 'pdf'));
@@ -168,7 +168,7 @@ var ExportSelector = Class.create( {
       pedOptionsTable.hide();
       privacyOptionsTable.show();
     }
-    if (exportType === 'fhir' || exportType === 'GA4GH') {
+    if (exportType === 'fhir_v1' || exportType === 'GA4GH') {
       fhirOptionsTable.show();
     } else {
       fhirOptionsTable.hide();
@@ -202,7 +202,7 @@ var ExportSelector = Class.create( {
       var privacySetting = $$('input:checked[type=radio][name="privacy-options"]')[0].value;
       var includeSVG = $('fhir-include-svg_checkbox').checked;
 
-      if (exportType == 'fhir') {
+      if (exportType == 'fhir_v1') {
         var svg = includeSVG ? PedigreeExport.exportAsSVG(editor.getGraph().DG, privacySetting) : null;
         var exportString = PedigreeExport.exportAsFHIR(editor.getGraph().DG, privacySetting, null, svg);
         var fileName = 'open-pedigree-fhir.json';

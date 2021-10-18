@@ -398,10 +398,10 @@ GA4GHFHIRConverter.extractDataFromFMH = function (familyHistoryResource,
       firstNodeData.mother = secondNodeData.nodeId;
     }
   }
-  else if (rel === 'KIN:026' || rel === 'KIN:030' || rel === 'KIN:047'  || rel === 'KIN:048'){
+  else if (rel === 'KIN:026' || rel === 'KIN:030' || rel === 'KIN:048'  || rel === 'KIN:049'){
     // SIGOTHR
-    let isConsang = (rel == 'KIN:030' || rel === 'KIN:048');
-    let isBroken = (rel == 'KIN:047' || rel === 'KIN:048');
+    let isConsang = (rel == 'KIN:030' || rel === 'KIN:049');
+    let isBroken = (rel == 'KIN:048' || rel === 'KIN:049');
     if ('partners' in firstNodeData){
       firstNodeData.partners.push(secondNodeData.nodeId);
       firstNodeData.partnerType.push({consangr: isConsang, broken: isBroken});
@@ -1503,8 +1503,9 @@ GA4GHFHIRConverter.familyHistoryLookup = {
   'KIN:044': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:044', 'display': 'hasSpermDonor' },
   'KIN:045': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:045', 'display': 'hasGreatGrandParent' },
   'KIN:046': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:046', 'display': 'hasParentalSibling' },
-  'KIN:047': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:047', 'display': 'isBrokenPartner' },
-  'KIN:048': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:048', 'display': 'isBrokenConsanguineousPartner' },
+  'KIN:047': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:047', 'display': 'isGreatGrandchild' },
+  'KIN:048': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:048', 'display': 'isBrokenPartner' },
+  'KIN:049': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:049', 'display': 'isBrokenConsanguineousPartner' },
 
 };
 
@@ -1517,9 +1518,9 @@ GA4GHFHIRConverter.relationshipMap = {
   'ADOPTFTH':  'KIN:022',
   'ADOPTPRN':  'KIN:022',
   'SIGOTHR':   'KIN:026',
-  'BROKEN_SIGOTHR':   'KIN:047',
+  'BROKEN_SIGOTHR':   'KIN:048',
   'CONSANG':   'KIN:030',
-  'BROKEN_CONSANG':   'KIN:048',
+  'BROKEN_CONSANG':   'KIN:049',
   'TWIN':      'KIN:009',
   'TWINSIS':   'KIN:010',
   'TWINBRO':   'KIN:010',
