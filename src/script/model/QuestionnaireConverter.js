@@ -1835,7 +1835,7 @@ function addSideToChildren(connections, index, side ){
 
 QuestionnaireConverter.createQuestionnaireDataFromGraph = function (pedigree, oldQData) {
   // go through the pedigree and add external id's that match the
-  console.log(pedigree);
+  // console.log(pedigree);
   let oldQDataByTag = {};
   if (oldQData) {
     for (let od of oldQData) {
@@ -2073,11 +2073,13 @@ function findConnectedRelative(relations, connections, pedigree){
   }
   let names = [];
   let properties = pedigree.GG.properties[bestIndex];
-  if (properties.fName){
-    names.push(properties.fName);
-  }
-  if (properties.lName){
-    names.push(properties.lName);
+  if (properties){
+    if (properties.fName){
+      names.push(properties.fName);
+    }
+    if (properties.lName){
+      names.push(properties.lName);
+    }
   }
   return names.join(' ');
 }

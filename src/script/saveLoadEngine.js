@@ -205,42 +205,54 @@ var SaveLoadEngine = Class.create( {
         const closeOnSave = getParameterByName(options, 'closeOnSave');
         const qDataKey = getParameterByName(options, 'qData');
 
-        if (qDataKey){
-          console.log('found qData key : ' + qDataKey );
-          let oldQData = JSON.parse(localStorage.getItem(qDataKey));
-          let qData = QuestionnaireConverter.createQuestionnaireDataFromGraph(editor.getGraph().DG, oldQData);
-          localStorage.setItem(qDataKey, JSON.stringify(qData, null, 2));
-          console.log('Set qData into local stoarge', qData);
+        if (qDataKey) {
+          console.log('found qData key : ' + qDataKey);
+          try {
+            let oldQData = JSON.parse(localStorage.getItem(qDataKey));
+            let qData = QuestionnaireConverter.createQuestionnaireDataFromGraph(editor.getGraph().DG, oldQData);
+            localStorage.setItem(qDataKey, JSON.stringify(qData, null, 2));
+            console.log('Set qData into local stoarge', qData);
+          } catch (err) {
+            console.log('Error setting qData:');
+            console.log(err);
+          }
         }
 
-        jsonData = null;
-        if (format === 'fhir_v1'){
-          // var patientFhirRef = (this._context) ? this._context.patientFhirRef : null;
-          var patientFhirRef = null;
-          jsonData = PedigreeExport.exportAsFHIR(editor.getGraph().DG, 'all', patientFhirRef, pedigreeImage);
-        } else if (format === 'fhir' || format === 'GA4GH'){
-          var patientFhirRef = null;
-          jsonData = PedigreeExport.exportAsGA4GH(editor.getGraph().DG, 'all', patientFhirRef, pedigreeImage);
-        }
-        // else if (this._saveAs === "simpleJSON"){
-        //   jsonData = PedigreeExport.exportAsSimpleJSON(editor.getGraph().DG, "all");;
-        // }
-        else {
-          jsonData = this.serialize();
-        }
-        const data = {};
-        data.value = jsonData;
-        if (this._context){
-          data.context = this._context;
-        }
-        localStorage.setItem(localStorageKey, JSON.stringify(data, null, 2));
+        try {
+          jsonData = null;
+          if (format === 'fhir_v1'){
+            // var patientFhirRef = (this._context) ? this._context.patientFhirRef : null;
+            var patientFhirRef = null;
+            jsonData = PedigreeExport.exportAsFHIR(editor.getGraph().DG, 'all', patientFhirRef, pedigreeImage);
+          } else if (format === 'fhir' || format === 'GA4GH'){
+            var patientFhirRef = null;
+            jsonData = PedigreeExport.exportAsGA4GH(editor.getGraph().DG, 'all', patientFhirRef, pedigreeImage);
+          }
+            // else if (this._saveAs === "simpleJSON"){
+            //   jsonData = PedigreeExport.exportAsSimpleJSON(editor.getGraph().DG, "all");;
+          // }
+          else {
+            jsonData = this.serialize();
+          }
+          const data = {};
+          data.value = jsonData;
+          if (this._context){
+            data.context = this._context;
+          }
+          localStorage.setItem(localStorageKey, JSON.stringify(data, null, 2));
 
-        console.log('[SAVE] to local storage : ' + localStorageKey + ' as ' + format);
+          console.log('[SAVE] to local storage : ' + localStorageKey + ' as ' + format);
+          document.fire('pedigree:save:complete');
+          if (closeOnSave === 'true' || closeOnSave === ''){
+            console.log('Attempt to close the window');
+            window.close();
+          }
+        } catch (err) {
+          console.log('Error exporting pedigree:');
+          console.log(err);
+          alert('Error exporting pedigree: ' + err);
+        }
         document.fire('pedigree:save:complete');
-        if (closeOnSave === 'true' || closeOnSave === ''){
-          console.log('Attempt to close the window');
-          window.close();
-        }
       } else {
         jsonData = this.serialize();
 

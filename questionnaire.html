@@ -46,17 +46,39 @@
       $("#context").val(data.context);
       $("#data").val(data.value);
       var FHIRdata = JSON.parse(data.value);
-      if (FHIRdata){
-        if (FHIRdata.contained){
-          for (let containedResource of FHIRdata.contained){
-            console.log(containedResource)
-            if (containedResource.id === 'pedigreeImage'){
-              let svg = decodeURIComponent(escape(atob(containedResource.content.attachment.data)));
-              var container = document.getElementById("SVGContainer");
-              container.innerHTML = svg;
-              break;
+      if (FHIRdata) {
+        let foundSVG = false;
+        if ("Composition" === FHIRdata.resourceType){
+          if (FHIRdata.contained) {
+            for (let containedResource of FHIRdata.contained) {
+              if (containedResource.id === 'pedigreeImage') {
+                foundSVG = true;
+                svg = decodeURIComponent(escape(atob(containedResource.content.attachment.data)));
+                svg = svg.replace(/width=".*?"/, 'width="auto"')
+                        .replace(/height=".*?"/, 'height="auto"');
+                break;
+              }
             }
           }
+        }
+        else if ("Bundle" === FHIRdata.resourceType){
+          if (FHIRdata.entry) {
+            for (let e of FHIRdata.entry) {
+              let containedResource = e.resource;
+              if ('DocumentReference' === containedResource.resourceType &&
+                      'Pedigree Diagram of Family in SVG format' === containedResource.description){
+                foundSVG = true;
+                svg = decodeURIComponent(escape(atob(containedResource.content.attachment.data)));
+                svg = svg.replace(/width=".*?"/, 'width="auto"')
+                        .replace(/height=".*?"/, 'height="auto"');
+                break;
+              }
+            }
+          }
+        }
+        if (foundSVG){
+          var container = document.getElementById("SVGContainer");
+          container.innerHTML = svg;
         }
       }
     }
