@@ -220,6 +220,48 @@ FHIRConverter.initFromFHIR = function(inputText) {
       newG.addEdge(chhubID, personID, defaultEdgeWeight);
     }
 
+
+    for (const nextPerson of nodeData){
+      if (nextPerson.partners){
+        let nextPersonId = getPersonID(nextPerson);
+        for (let i=0; i < nextPerson.partners.length; i++){
+          const partnerId = findReferencedPerson(nextPerson.partners[i].ref, 'partner');
+          if (partnerId < nextPerson.nodeId){
+            continue; // should have already been processed.
+          }
+
+          const partnerType = nextPerson.partners[i].type;
+          if (!partnerType.consangr && !partnerType.broken){
+            // nothing to set
+            continue;
+          }
+
+          let relNode = newG.getRelationshipNode(nextPersonId, partnerId);
+          if (relNode){
+            let relProperties = newG.properties[relNode];
+            if (partnerType.consangr){
+              if (relProperties['consangr'] !== 'Y'){
+                relProperties['consangr'] = 'Y';
+                // check if we can make it 'A'
+                let nextGreatGrandParents = newG.getParentGenerations(nextPersonId, 3);
+                let partnerGreatGrandParents = newG.getParentGenerations(partnerId, 3);
+                for (let elem of nextGreatGrandParents) {
+                  if (partnerGreatGrandParents.has(elem)) {
+                    // found common
+                    relProperties['consangr'] = 'A';
+                    break;
+                  }
+                }
+              }
+            }
+            if (partnerType.broken){
+              relProperties['broken'] = true;
+            }
+          }
+        }
+      }
+    }
+
     newG.validate();
     // PedigreeImport.validateBaseGraph(newG);
 
@@ -528,6 +570,37 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
           possibleTwins = {};
         }
         possibleTwins[ref] = type;
+      } else if (ex.url === 'http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-partner') {
+        let type = undefined;
+        let ref = undefined;
+        let subExtensions = ex.extension;
+        for (let j = 0; j < subExtensions.length; j++) {
+          let subEx = subExtensions[j];
+          if (subEx.url === 'type') {
+            let codings = subEx.valueCodeableConcept.coding;
+            for (let k = 0; k < codings.length; k++) {
+              if (codings[k].system === 'http://purl.org/ga4gh/kin.fhir') {
+                let code = codings[k].code;
+                let isConsang = (code === 'KIN:030' || code === 'KIN:049');
+                let isBroken = (code === 'KIN:048' || code === 'KIN:049');
+                type = {consangr: isConsang, broken: isBroken};
+                break;
+              }
+            }
+          } else if (subEx.url === 'reference') {
+            ref = subEx.valueReference.reference;
+          }
+        }
+        if (!ref || !type) {
+          // we didn't find the reference or its a sibling not a twin
+          break;
+        }
+        ref = ref.substring(1); // remove leading #
+        if (result.hasOwnProperty('partners')){
+          result.partners.push({ref: ref, type: type});
+        } else {
+          result.partners= [{ref: ref, type: type}];
+        }
       } else if (ex.url === 'http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-observation') {
         let observationRef = ex.valueReference.reference;
         let observationResource = containedResourcesLookup[observationRef];
@@ -614,6 +687,8 @@ FHIRConverter.extractDataFromFMH = function(familyHistoryResource,
               }
             }
           }
+        } else {
+          console.log("Failed to find resource", observationRef, properties);
         }
       }
     }
@@ -895,7 +970,7 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
         if (hpoTerm.getName() === hpoTerms[j]){
           fhirObservation['valueString'] = hpoTerms[j];
         } else {
-          fhirObservation['valueCodeableConcept'] = { 'coding' : [ { 'system' : hpoSystem, 'code' : hpoTerms[i], 'display' : hpoTerm.getName() } ] };
+          fhirObservation['valueCodeableConcept'] = { 'coding' : [ { 'system' : hpoSystem, 'code' : hpoTerms[j], 'display' : hpoTerm.getName() } ] };
         }
         if (i === 0) {
           // we are talking about the patient
@@ -926,7 +1001,7 @@ FHIRConverter.exportAsFHIR = function(pedigree, privacySetting, fhirPatientRefer
         if (geneTerm.getName() === candidateGenes[j]){
           fhirObservation['valueString'] = candidateGenes[j];
         } else {
-          fhirObservation['valueCodeableConcept'] = { 'coding' : [ { 'system' : geneSystem, 'code' : candidateGenes[i], 'display' : geneTerm.getName() } ] };
+          fhirObservation['valueCodeableConcept'] = { 'coding' : [ { 'system' : geneSystem, 'code' : candidateGenes[j], 'display' : geneTerm.getName() } ] };
         }
         if (i === 0) {
           // we are talking about the patient
@@ -2201,6 +2276,34 @@ FHIRConverter.buildGeneticsParentExtension = function(index, relationship) {
 
 };
 
+FHIRConverter.partnerTypeLookup = {
+  'SIGOTHR': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:026', 'display': 'isPartner' },
+  'CONSANG': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:030', 'display': 'isConsanguineousPartner' },
+  'BROKEN_SIGOTHR': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:048', 'display': 'isBrokenPartner' },
+  'BROKEN_CONSANG': { 'system': 'http://purl.org/ga4gh/kin.fhir', 'code': 'KIN:049', 'display': 'isBrokenConsanguineousPartner' },
+}
+
+FHIRConverter.buildGeneticsPartnerExtension = function(index, relationship) {
+
+  let fullRelationship = FHIRConverter.partnerTypeLookup[relationship];
+  let ref = '#FMH_' + index;
+
+  return {
+    'url' : 'http://hl7.org/fhir/StructureDefinition/family-member-history-genetics-partner',
+    'extension' : [ {
+      'url' : 'type',
+      'valueCodeableConcept' : {
+        'coding' : [ fullRelationship ]
+      }
+    }, {
+      'url' : 'reference',
+      'valueReference' : {
+        'reference' : ref
+      }
+    } ]
+  };
+};
+
 FHIRConverter.buildGeneticsSiblingExtension = function(index, relationship) {
 
   let fullRelationship = FHIRConverter.familyHistoryLookup[relationship];
@@ -2265,6 +2368,38 @@ FHIRConverter.buildFhirFMH = function(index, pedigree, privacySetting,
 
     }
   }
+  // add partners
+  let partners = pedigree.GG.getAllPartners(index);
+  for (let i = 0; i < partners.length; i++) {
+      let partnerRelType = 'SIGOTHR'
+      let relNode = pedigree.GG.getRelationshipNode(index, partners[i]);
+
+      if (relNode != null) {
+        let relProperties = pedigree.GG.properties[relNode];
+        let consangr = relProperties['consangr'] ? relProperties['consangr'] : 'A';
+        if (consangr === 'Y'){
+          partnerRelType = 'CONSANG';
+        }
+        else if (consangr === 'A') {
+          // spec says second cousins or closer, A second cousin is a someone who shares a great-grandparent with you
+          // so make a list of parents going back 3 generations and look for any common nodes
+          let myGreatGrandParents = pedigree.GG.getParentGenerations(index, 3);
+          let partnerGreatGrandParents = pedigree.GG.getParentGenerations(partners[i], 3);
+          for (let elem of myGreatGrandParents) {
+            if (partnerGreatGrandParents.has(elem)) {
+              // found common
+              partnerRelType = 'CONSANG';
+              break;
+            }
+          }
+        }
+        if (relProperties['broken']){
+          partnerRelType = 'BROKEN_' + partnerRelType;
+        }
+        extensions.push(this.buildGeneticsPartnerExtension(partners[i], partnerRelType));
+      }
+    }
+
   let twinGroupId = pedigree.GG.getTwinGroupId(index);
   if (twinGroupId != null){
     // this person is a twin

@@ -1251,28 +1251,28 @@ DynamicPositionedGraph.prototype = {
 
     //this._debugPrintAll("before");
 
-    if (importType == 'ped') {
+    if (importType === 'ped') {
       var baseGraph = PedigreeImport.initFromPED(importString, importOptions.acceptUnknownPhenotypes, importOptions.markEvaluated, importOptions.externalIdMark);
       if (!this._recreateUsingBaseGraph(baseGraph)) {
         return null;
       }  // no changes
-    } else if (importType == 'BOADICEA') {
+    } else if (importType === 'BOADICEA') {
       var baseGraph = PedigreeImport.initFromBOADICEA(importString, importOptions.externalIdMark);
       if (!this._recreateUsingBaseGraph(baseGraph)) {
         return null;
       }  // no changes
-    } else if (importType == 'gedcom') {
+    } else if (importType === 'gedcom') {
       var baseGraph = PedigreeImport.initFromGEDCOM(importString, importOptions.markEvaluated, importOptions.externalIdMark);
       if (!this._recreateUsingBaseGraph(baseGraph)) {
         return null;
       }  // no changes
-    } else if (importType == 'fhir') {
+    } else if (importType === 'fhir_v1') {
       var baseGraph = PedigreeImport.initFromFHIR(importString);
       if (!this._recreateUsingBaseGraph(baseGraph)) {
         return null;
       }  // no changes
     }
-    else if (importType == 'GA4GH') {
+    else if (importType === 'GA4GH' || importType === 'fhir') {
       var baseGraph = PedigreeImport.initFromGA4GH(importString);
       if (!this._recreateUsingBaseGraph(baseGraph)) {
         return null;

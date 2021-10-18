@@ -55,7 +55,7 @@ var ImportSelector = Class.create( {
     typeListElement.insert(_addTypeOption(true,  'PED or LINKAGE (pre- or post- makeped)', 'ped'));
     typeListElement.insert(_addTypeOption(false, 'GEDCOM', 'gedcom'));
     typeListElement.insert(_addTypeOption(false, 'BOADICEA', 'BOADICEA'));
-    typeListElement.insert(_addTypeOption(false, 'FHIR(JSON)', 'fhir'));
+    typeListElement.insert(_addTypeOption(false, 'Legacy FHIR(JSON)', 'fhir_v1'));
     typeListElement.insert(_addTypeOption(false, 'GA4GH FHIR(JSON)', 'GA4GH'));
 
     var promptType = new Element('div', {'class': 'import-section'}).update('Data format:');
