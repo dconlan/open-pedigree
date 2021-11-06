@@ -13,6 +13,7 @@ import '../public/vendor/selectize/selectize.default.css';
 import TerminologyManager from 'pedigree/terminology/terminologyManger';
 import FHIRTerminology from 'pedigree/terminology/FHIRTerminology';
 import CTSSTerminology from 'pedigree/terminology/CTSSTerminology';
+import REDCapFHIRTerminology from 'pedigree/terminology/REDCapFHIRTerminology';
 
 var editor;
 
@@ -29,6 +30,11 @@ OpenPedigree.initialiseEditor = function(options){
 OpenPedigree.setFHIRTerminology = function(type, fhirBaseUrl, codeSystem, valueSet, validIdRegex, searchCount){
   TerminologyManager.addTerminology(type,
       new FHIRTerminology(type, codeSystem, validIdRegex, searchCount, fhirBaseUrl, valueSet));
+};
+
+OpenPedigree.setREDCapFHIRTerminology = function(type, redcapTerminolgyUrl, codeSystem, valueSet, validIdRegex, searchCount){
+  TerminologyManager.addTerminology(type,
+    new REDCapFHIRTerminology(type, codeSystem, validIdRegex, searchCount, redcapTerminolgyUrl, valueSet));
 };
 
 OpenPedigree.setCTSSTerminology = function(type, ctssBaseUrl, codeSystem, validIdRegex, searchCount, valueColumn, textColumn){
