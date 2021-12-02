@@ -552,6 +552,7 @@ var Person = Class.create(AbstractPerson, {
     if(this.hasDisorder(disorderID)) {
       editor.getDisorderLegend().removeCase(disorderID, this.getID());
       this._disorders = this.getDisorders().without(disorderID);
+      this.getGraphics().updateDisorderShapes();
     } else {
       if (disorderID != 'affected') {
         alert('This person doesn\'t have the specified disorder');
@@ -650,6 +651,7 @@ var Person = Class.create(AbstractPerson, {
     for(var i = 0; i < phenotypes.length; i++) {
       this.addPhenotype( phenotypes[i] );
     }
+    this.getGraphics().updateDisorderShapes();
   },
 
   /**
@@ -708,6 +710,7 @@ var Person = Class.create(AbstractPerson, {
     for(var i = 0; i < genes.length; i++) {
       this.addGene( genes[i] );
     }
+    this.getGraphics().updateDisorderShapes();
   },
   /**
      * Returns a list of candidate genes for this person.

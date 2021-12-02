@@ -18,6 +18,11 @@
     <script type="text/javascript" src="public/vendor/filesaver/FileSaver.js"></script>
     <script type="text/javascript" src="public/vendor/URI.js"></script>
 
+    <!-- PDF libraries -->
+    <script type="text/javascript" src="public/vendor/pdfkit/pdfkit.standalone.js"></script>
+    <script type="text/javascript" src="public/vendor/pdfkit/svg-to-pdfkit.js"></script>
+    <script type="text/javascript" src="public/vendor/pdfkit/blob-stream.js"></script>
+
     <!-- XWiki REST API and widgets -->
     <script type="text/javascript" src="public/vendor/xwiki/xwiki-min.js"></script>
     <script type="text/javascript" src="public/vendor/phenotips/Widgets.js"></script>
@@ -59,7 +64,7 @@
         }
         else {
           OpenPedigree.setREDCapFHIRTerminology('disorder', redcapTerminolgyUrl, 'http://www.omim.org',
-                  'http://www.omim.org', /[0-9]+/, 20);
+                  'http://www.omim.org?vs', /[0-9]+/, 20);
           OpenPedigree.setREDCapFHIRTerminology('phenotype', redcapTerminolgyUrl, 'http://purl.obolibrary.org/obo/hp.fhir',
                   'http://purl.obolibrary.org/obo/hp.fhir?vs', /^(http:\/\/)|(HP:)/, 20);
           OpenPedigree.setREDCapFHIRTerminology('gene', redcapTerminolgyUrl, 'http://www.genenames.org/geneId',
@@ -80,7 +85,7 @@
         }
         else {
           OpenPedigree.setFHIRTerminology('disorder', ontologyServer, 'http://www.omim.org',
-                  'http://www.omim.org', /[0-9]+/, 20);
+                  'http://www.omim.org?vs', /[0-9]+/, 20);
           OpenPedigree.setFHIRTerminology('phenotype', ontologyServer, 'http://purl.obolibrary.org/obo/hp.fhir',
                   'http://purl.obolibrary.org/obo/hp.fhir?vs', /^(http:\/\/)|(HP:)/, 20);
           OpenPedigree.setFHIRTerminology('gene', ontologyServer, 'http://www.genenames.org/geneId',
@@ -90,9 +95,14 @@
 
       var qData = getParameterByName('qData');
 
+      var format = getParameterByName('format') || 'fhir';
+      if (format === ''){
+        format = 'fhir';
+      }
+
       console.log("creating editor");
 
-      var editorOptions = {patientDataUrl: 'local:pedigreeData?format=fhir&closeOnSave=true' + (qData?('&qData='+qData):''),
+      var editorOptions = {patientDataUrl: 'local:pedigreeData?format='+format+'&closeOnSave=true' + (qData?('&qData='+qData):''),
                            returnUrl: '#CloseWindow'};
 
 
