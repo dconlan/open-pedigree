@@ -1382,17 +1382,50 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
     // should not be possible
   } else if (tag.startsWith('sibling_')){
     // means we are missing mother and father
-    if (!('mother' in fakeNodes || 'father' in fakeNodes)){
-      console.log('adding fake mother due to sibling not connected');
-      fakeNodes.mother = { qNode: { tag: 'mother'}, properties: {id: 'mother', externalId: 'mother', gender: 'F'}, children: new Set(), partners: new Set()};
+    if ('pat' === person.qNode.sibling_type){
+      if (!('father' in fakeNodes)){
+        console.log('adding fake father due to sibling not connected');
+        fakeNodes.father = { qNode: { tag: 'father'}, properties: {id: 'father', externalId: 'father', gender: 'M'}, children: new Set(), partners: new Set()};
+      }
+    }
+    else if ('mat' === person.qNode.sibling_type){
+      if (!('mother' in fakeNodes)){
+        console.log('adding fake mother due to sibling not connected');
+        fakeNodes.mother = { qNode: { tag: 'mother'}, properties: {id: 'mother', externalId: 'mother', gender: 'F'}, children: new Set(), partners: new Set()};
+      }
+    }
+    else {
+      if (!('mother' in fakeNodes || 'father' in fakeNodes)){
+        console.log('adding fake mother due to sibling not connected');
+        fakeNodes.mother = { qNode: { tag: 'mother'}, properties: {id: 'mother', externalId: 'mother', gender: 'F'}, children: new Set(), partners: new Set()};
+      }
     }
     // if (!('father' in fakeNodes)){
     //   console.log('adding fake father due to sibling not connected');
     //   fakeNodes.father = { qNode: { tag: 'father'}, properties: {id: 'father', externalId: 'father', gender: 'M'}, children: new Set(), partners: new Set()};
     // }
   } else if (tag.startsWith('m_sibling_')){
-    // means we are missing m_mother and m_father
-    if (!('m_mother' in fakeNodes || 'm_father' in fakeNodes)){
+    // means we are missing m_mother and m_father but have to deal with sibling type
+    if ('pat' === person.qNode.sibling_type){
+      if (!('m_father' in fakeNodes)){
+        console.log('adding fake m_father due to m_sibling not connected');
+        fakeNodes.m_father = { qNode: { tag: 'm_father'}, properties: {id: 'm_father', externalId: 'm_father', gender: 'M'}, children: new Set(), partners: new Set()};
+        if (!('mother' in nodeByTag || 'mother' in fakeNodes )) {
+          QuestionnaireConverter.addMissingNodes(fakeNodes.m_father, nodeByTag, fakeNodes);
+        }
+      }
+    }
+    else if ('mat' === person.qNode.sibling_type){
+      // meternal m_sibling needs a m_mother
+      if (!('m_mother' in fakeNodes)){
+        console.log('adding fake m_mother due to m_sibling not connected');
+        fakeNodes.m_mother = { qNode: { tag: 'm_mother'}, properties: {id: 'm_mother', externalId: 'm_mother', gender: 'F'}, children: new Set(), partners: new Set()};
+        if (!('mother' in nodeByTag || 'mother' in fakeNodes )) {
+          QuestionnaireConverter.addMissingNodes(fakeNodes.m_mother, nodeByTag, fakeNodes);
+        }
+      }
+    }
+    else if (!('m_mother' in fakeNodes || 'm_father' in fakeNodes)){
       console.log('adding fake m_mother due to m_sibling not connected');
       fakeNodes.m_mother = { qNode: { tag: 'm_mother'}, properties: {id: 'm_mother', externalId: 'm_mother', gender: 'F'}, children: new Set(), partners: new Set()};
       if (!('mother' in nodeByTag || 'mother' in fakeNodes )) {
@@ -1409,7 +1442,26 @@ QuestionnaireConverter.addMissingNodes = function(person, nodeByTag, fakeNodes, 
     //   console.log('adding fake f_mother due to f_sibling not connected');
     //   fakeNodes.f_mother = { qNode: { tag: 'f_mother'}, properties: {id: 'f_mother', externalId: 'f_mother', gender: 'F'}, children: new Set(), partners: new Set()};
     // }
-    if (!('f_father' in fakeNodes || 'f_mother' in fakeNodes)){
+    if ('pat' === person.qNode.sibling_type){
+      if (!('f_father' in fakeNodes)){
+        console.log('adding fake f_father due to f_sibling not connected');
+        fakeNodes.f_father = { qNode: { tag: 'f_father'}, properties: {id: 'f_father', externalId: 'f_father', gender: 'M'}, children: new Set(), partners: new Set()};
+        if (!('father' in nodeByTag || 'father' in fakeNodes )) {
+          QuestionnaireConverter.addMissingNodes(fakeNodes.f_father, nodeByTag, fakeNodes);
+        }
+      }
+    }
+    else if ('mat' === person.qNode.sibling_type){
+      // meternal m_sibling needs a m_mother
+      if (!('f_mother' in fakeNodes)){
+        console.log('adding fake f_mother due to f_sibling not connected');
+        fakeNodes.f_mother = { qNode: { tag: 'f_mother'}, properties: {id: 'f_mother', externalId: 'f_mother', gender: 'F'}, children: new Set(), partners: new Set()};
+        if (!('father' in nodeByTag || 'father' in fakeNodes )) {
+          QuestionnaireConverter.addMissingNodes(fakeNodes.f_mother, nodeByTag, fakeNodes);
+        }
+      }
+    }
+    else if (!('f_father' in fakeNodes || 'f_mother' in fakeNodes)){
       console.log('adding fake f_father due to f_sibling not connected');
       fakeNodes.f_father = { qNode: { tag: 'f_father'}, properties: {id: 'm_father', externalId: 'm_father', gender: 'M'}, children: new Set(), partners: new Set()};
       if (!('father' in nodeByTag || 'father' in fakeNodes )) {
