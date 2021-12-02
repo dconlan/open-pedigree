@@ -194,7 +194,13 @@ var SaveLoadEngine = Class.create( {
 
     if (patientDataUrl) {
       document.fire('pedigree:save:start');
-      let pedigreeImage = PedigreeExport.exportAsSVG(editor.getGraph().DG);
+      let pedigreeImage = null;
+      try {
+        pedigreeImage = PedigreeExport.exportAsSVG(editor.getGraph().DG);
+      } catch (err) {
+        console.log('Error creating svg');
+        console.log(err);
+      }
 
       const uri = new URI(patientDataUrl);
       if (uri.protocol() === 'local' ) {
@@ -299,26 +305,34 @@ var SaveLoadEngine = Class.create( {
         var data = JSON.parse(localStorage.getItem(localStorageKey));
         var clear = true;
         var createCalled = false;
-        if (data){
-          if(data.context){
-            this._context = data.context;
-          } else {
-            this._context = undefined;
-          }
+        try {
+          if (data){
+            if(data.context){
+              this._context = data.context;
+            } else {
+              this._context = undefined;
+            }
 
-          var jsonData  = data.value;
-          if (jsonData && jsonData.length > 0){
-            createCalled = true;
-            if (format === 'fhir') {
-              if (this.createGraphFromImportData(jsonData, format, {}, false /* add to undo stack */, true /*center around 0*/)) {
-                // loaded
+            var jsonData  = data.value;
+            if (jsonData && jsonData.length > 0){
+              createCalled = true;
+              if (format === 'fhir' || format === 'fhir_v1' || format === 'GA4GH') {
+                if (this.createGraphFromImportData(jsonData, format, {}, false /* add to undo stack */, true /*center around 0*/)) {
+                  // loaded
+                  clear = false;
+                }
+              } else {
+                jsonData = editor.getVersionUpdater().updateToCurrentVersion(jsonData);
+                this.createGraphFromSerializedData(jsonData);
+                // the createGraphFromSerializedData method will clear if it errors
                 clear = false;
               }
-            } else {
-              jsonData = editor.getVersionUpdater().updateToCurrentVersion(jsonData);
-              this.createGraphFromSerializedData(jsonData);
-              // the createGraphFromSerializedData method will clear if it errors
-              clear = false;
+            } else if (qData && qData.length > 0) {
+              createCalled = true;
+              var newBaseGraph = QuestionnaireConverter.initFromQuestionnaire(qData);
+              if (this.createGraphFromBaseGraph(newBaseGraph, false /* add to undo stack */, true /*center around 0*/)){
+                clear = false;
+              }
             }
           } else if (qData && qData.length > 0) {
             createCalled = true;
@@ -327,12 +341,11 @@ var SaveLoadEngine = Class.create( {
               clear = false;
             }
           }
-        } else if (qData && qData.length > 0) {
-          createCalled = true;
-          var newBaseGraph = QuestionnaireConverter.initFromQuestionnaire(qData);
-          if (this.createGraphFromBaseGraph(newBaseGraph, false /* add to undo stack */, true /*center around 0*/)){
-            clear = false;
-          }
+        }
+        catch (err) {
+          console.log('Error loading pedigree:');
+          console.log(err);
+          alert('Error loading pedigree: ' + err);
         }
         if (createCalled){
           if (clear){

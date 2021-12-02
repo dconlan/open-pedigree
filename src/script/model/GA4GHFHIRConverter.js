@@ -590,22 +590,44 @@ GA4GHFHIRConverter.extractDataFromObservation = function (observationResource, n
   }
   if (!foundCode){
     if (observationResource.valueString){
-      if (observationResource.id.contains('_clinical_')){
+      const phenotypePrefix = 'phenotype: ';
+      const genePrefix = 'gene: ';
+      if (observationResource.valueString.startsWith(phenotypePrefix)){
         foundCode = true;
         if ('hpoTerms' in nodeData.properties){
-          nodeData.properties.hpoTerms.push(observationResource.valueString);
+          nodeData.properties.hpoTerms.push(observationResource.valueString.substring(phenotypePrefix.length));
         }
         else {
-          nodeData.properties.hpoTerms = [observationResource.valueString];
+          nodeData.properties.hpoTerms = [observationResource.valueString.substring(phenotypePrefix.length)];
         }
       }
-      else if (observationResource.id.contains('_gene_')){
+      else if (observationResource.valueString.startsWith(genePrefix)){
         foundCode = true;
         if ('candidateGenes' in nodeData.properties){
-          nodeData.properties.candidateGenes.push(observationResource.valueString);
+          nodeData.properties.candidateGenes.push(observationResource.valueString.substring(genePrefix.length));
         }
         else {
-          nodeData.properties.candidateGenes = [observationResource.valueString];
+          nodeData.properties.candidateGenes = [observationResource.valueString.substring(genePrefix.length)];
+        }
+      }
+      else if (observationResource.id){
+        if (observationResource.id.includes('_clinical_')){
+          foundCode = true;
+          if ('hpoTerms' in nodeData.properties){
+            nodeData.properties.hpoTerms.push(observationResource.valueString);
+          }
+          else {
+            nodeData.properties.hpoTerms = [observationResource.valueString];
+          }
+        }
+        else if (observationResource.id.includes('_gene_')){
+          foundCode = true;
+          if ('candidateGenes' in nodeData.properties){
+            nodeData.properties.candidateGenes.push(observationResource.valueString);
+          }
+          else {
+            nodeData.properties.candidateGenes = [observationResource.valueString];
+          }
         }
       }
     }
@@ -1845,6 +1867,9 @@ GA4GHFHIRConverter.addConditions = function (nodeProperties, ref, condtions) {
 
 GA4GHFHIRConverter.addObservations = function (nodeProperties, ref, observations) {
   let observationsForRef = [];
+  const phenotypePrefix = 'phenotype: ';
+  const genePrefix = 'gene: ';
+
   if (nodeProperties['hpoTerms']) {
     let hpoTerms = nodeProperties['hpoTerms'];
     let hpoLegend = editor.getHPOLegend();
@@ -1860,7 +1885,7 @@ GA4GHFHIRConverter.addObservations = function (nodeProperties, ref, observations
       };
       let hpoTerm = hpoLegend.getTerm(hpoTerms[j]);
       if (hpoTerm.getName() === hpoTerms[j]) {
-        fhirObservation['valueString'] = hpoTerms[j];
+        fhirObservation['valueString'] = phenotypePrefix + hpoTerms[j];
       } else {
         fhirObservation['valueCodeableConcept'] = {
           'coding': [{
@@ -1889,7 +1914,7 @@ GA4GHFHIRConverter.addObservations = function (nodeProperties, ref, observations
       };
       let geneTerm = geneLegend.getTerm(candidateGenes[j]);
       if (geneTerm.getName() === candidateGenes[j]) {
-        fhirObservation['valueString'] = candidateGenes[j];
+        fhirObservation['valueString'] = genePrefix + candidateGenes[j];
       } else {
         fhirObservation['valueCodeableConcept'] = {
           'coding': [{
