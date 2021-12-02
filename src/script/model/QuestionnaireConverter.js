@@ -1860,6 +1860,13 @@ QuestionnaireConverter.connectFakeNode = function(person, nodeByTag){
       setParentOfExtended(nodeByTag, person, 'm_extended_', ['grandniece', 'grandnephew']);
       break;
     case 'great-grandmother':
+      if ('m_mother' in nodeByTag && !nodeByTag.m_mother.mother){
+        person.children.add(nodeByTag.m_mother);
+        nodeByTag.m_mother.mother = person;
+      } else if ('m_father' in nodeByTag && !nodeByTag.m_father.mother){
+        person.children.add(nodeByTag.m_father);
+        nodeByTag.m_father.mother = person;
+      }
       // this will happen if we have a granduncle or grandaunt
       setParentOfExtended(nodeByTag, person, 'm_extended_', ['granduncle', 'grandaunt']);
       break;
@@ -1896,6 +1903,13 @@ QuestionnaireConverter.connectFakeNode = function(person, nodeByTag){
       break;
     case 'great-grandmother':
       // this will happen if we have a granduncle or grandaunt
+      if ('f_father' in nodeByTag && !nodeByTag.f_father.mother){
+        person.children.add(nodeByTag.f_father);
+        nodeByTag.f_father.mother = person;
+      } else if ('f_mother' in nodeByTag && !nodeByTag.f_mother.mother){
+        person.children.add(nodeByTag.f_mother);
+        nodeByTag.f_mother.mother = person;
+      }
       setParentOfExtended(nodeByTag, person, 'f_extended_', ['granduncle', 'grandaunt']);
       break;
     }
