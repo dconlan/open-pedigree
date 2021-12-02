@@ -498,20 +498,20 @@
         }
       }
     }
-    $('#have_children_flag').prop('checked', hasChildren).change();
-    $('#have_siblings_flag').prop('checked', hasSiblings).change();
-    $('#have_m_siblings_flag').prop('checked', hasMSiblings).change();
-    $('#have_f_siblings_flag').prop('checked', hasFSiblings).change();
+    $('#have_children_flag').val(hasChildren?'Yes':'').change();
+    $('#have_siblings_flag').val(hasSiblings?'Yes':'').change();
+    $('#have_m_siblings_flag').val(hasMSiblings?'Yes':'').change();
+    $('#have_f_siblings_flag').val(hasFSiblings?'Yes':'').change();
   }
 
   $(function() {
 
     let elementIteractions = [
-      {testElement: 'have_children_flag', showElement: 'partners_section', count: 0, action: 'showIfSelected'},
-      {testElement: 'have_children_flag', showElement: 'children_section', count: 0, action: 'showIfSelected'},
-      {testElement: 'have_siblings_flag', showElement: 'siblings_section', count: 0, action: 'showIfSelected'},
-      {testElement: 'have_m_siblings_flag', showElement: 'm_siblings_section', count: 0, action: 'showIfSelected'},
-      {testElement: 'have_f_siblings_flag', showElement: 'f_siblings_section', count: 0, action: 'showIfSelected'},
+      {testElement: 'have_children_flag', showElement: 'partners_section', count: 0, action: 'showIfNotEmpty'},
+      {testElement: 'have_children_flag', showElement: 'children_section', count: 0, action: 'showIfNotEmpty'},
+      {testElement: 'have_siblings_flag', showElement: 'siblings_section', count: 0, action: 'showIfNotEmpty'},
+      {testElement: 'have_m_siblings_flag', showElement: 'm_siblings_section', count: 0, action: 'showIfNotEmpty'},
+      {testElement: 'have_f_siblings_flag', showElement: 'f_siblings_section', count: 0, action: 'showIfNotEmpty'},
     ];
 
     let generateProbandProblemEntries = function(section, elementIteractions){
